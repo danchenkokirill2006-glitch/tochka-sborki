@@ -1390,7 +1390,7 @@ function showSubscriptionModal() {
       <p class="modal-lead">Демонстрационная подписка. Платежей пока нет — активация работает локально и нужна для прототипа будущей системы доступа.</p>
       <div class="plan-grid">
         <article class="plan-card"><span>START</span><strong>Бесплатно</strong><p>Теория, базовые задания и рабочее поле.</p><button class="ghost-button" data-close>ТЕКУЩИЙ ДОСТУП</button></article>
-        <article class="plan-card plan-card-pro"><span>PRO</span><strong>490 ₽ / мес</strong><p>Полный функционал, AI-проверка, расширенные инструменты и будущие премиум-модули.</p><button class="primary-button" data-subscribe>АКТИВИРОВАТЬ PRO <span>${uiIcon('forward')}</span></button></article>
+        <article class="plan-card plan-card-pro"><span>PRO</span><strong> 290 ₽ / мес</strong><p>Полный функционал, AI-проверка, расширенные инструменты и будущие премиум-модули.</p><button class="primary-button" data-subscribe>АКТИВИРОВАТЬ PRO <span>${uiIcon('forward')}</span></button></article>
       </div>
       <div class="subscription-note"><span>${uiIcon('check')}</span> Без реальной оплаты · <span>${uiIcon('check')}</span> Можно отключить в любой момент · <span>${uiIcon('check')}</span> Сейчас это mock-система</div>
     </div>`
