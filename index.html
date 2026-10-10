@@ -1,13 +1,25 @@
 <!doctype html>
-<html lang="en">
+<html lang="ru">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>tochka-sborki</title>
+    <meta name="theme-color" content="#101110" />
+    <meta name="description" content="Точка сборки — учебная среда по графическому дизайну: теория, практические задания, интерактивный редактор и разбор работ." />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Точка сборки — обучение графическому дизайну" />
+    <meta property="og:description" content="Изучайте графический дизайн на практике: собирайте плакаты в редакторе и проверяйте их по учебным критериям." />
+    <title>Точка сборки — обучение графическому дизайну</title>
+    <style>
+      #startup-fallback{box-sizing:border-box;min-height:100vh;padding:32px;display:grid;place-content:center;background:#101110;color:#f1f1ed;font:16px/1.6 system-ui,sans-serif}
+      #startup-fallback section{width:min(560px,90vw);padding:32px;border:1px solid #383443;border-radius:24px;background:#18161f;box-shadow:0 24px 80px #0005}
+      #startup-fallback h1{margin:0 0 12px;font-size:clamp(28px,6vw,42px);line-height:1.08;letter-spacing:-.04em}
+      #startup-fallback p{color:#c1bdc9}
+      #startup-fallback a{color:#c0aaff}
+    </style>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app"><main id="startup-fallback"><section><h1>Точка сборки загружается…</h1><p>Если экран не сменился, откройте сайт через локальный запускатель <strong>«Открыть сайт.bat»</strong>. Файл index.html нельзя запускать двойным щелчком.</p><p>Публичная версия: <a href="https://tochka-sborki-two.vercel.app">tochka-sborki-two.vercel.app</a></p></section></main></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
