@@ -45,7 +45,7 @@ export function mountHeroScene(host: HTMLElement): () => void {
     const chrome=material({color:0xe2e4f5,metalness:1,roughness:.17})
     const cream=material({color:0xf2e4ca,roughness:.29,clearcoat:.7})
     const orange=material({color:0xff6029,roughness:.25,clearcoat:1})
-    const glass=material({color:0xc0b5ff,metalness:.05,roughness:.1,transmission:.8,thickness:1.2,ior:1.45})
+    const glass=material({color:0xc0b5ff,metalness:.12,roughness:.19,transmission:.48,thickness:.35,ior:1.38})
     const mesh=(geometry:THREE.BufferGeometry,mat:THREE.Material,x=0,y=0,z=0)=>{
       resources.push(geometry); const object=new THREE.Mesh(geometry,mat)
       object.position.set(x,y,z); assembly.add(object); return object
@@ -57,22 +57,22 @@ export function mountHeroScene(host: HTMLElement): () => void {
     ribbonShape.quadraticCurveTo(-.46,0,-.42,-.055)
     const points=Array.from({length:97},(_,i)=>{
       const t=i/96*Math.PI*2
-      return new THREE.Vector3(1.55*Math.cos(t),1.9*Math.sin(t),.6*Math.sin(2*t))
+      return new THREE.Vector3(1.02*Math.cos(t),1.25*Math.sin(t),-.55+.35*Math.sin(2*t))
     })
     const path=new THREE.CatmullRomCurve3(points,true,'centripetal')
     const rawRibbon=new THREE.ExtrudeGeometry(ribbonShape,{steps:240,extrudePath:path,bevelEnabled:false})
     rawRibbon.deleteAttribute('normal'); rawRibbon.deleteAttribute('uv')
     const smoothRibbon=mergeVertices(rawRibbon); smoothRibbon.computeVertexNormals(); rawRibbon.dispose()
-    const ribbon=mesh(smoothRibbon,blue,-.1,.12,0)
+    const ribbon=mesh(smoothRibbon,blue,-1.18,.12,0)
     ribbon.rotation.z=.32
-    const ring=mesh(new THREE.TorusGeometry(1.13,.21,24,100),glass,.68,-.38,.65)
-    ring.rotation.set(.62,.72,-.4)
-    const satellite=mesh(new THREE.TorusGeometry(.66,.105,20,72),chrome,-1.25,-1.14,.5)
-    satellite.rotation.set(.9,-.25,.2)
-    mesh(new THREE.SphereGeometry(.57,48,32),cream,.7,1.25,.56)
-    const block=mesh(new RoundedBoxGeometry(.8,.8,.8,4,.14),orange,1.22,-1.13,.65)
-    block.rotation.set(.25,.5,.3)
-    const bead=mesh(new THREE.SphereGeometry(.17,24,16),chrome,-1.7,.75,.45)
+    const ring=mesh(new THREE.TorusGeometry(.8,.13,24,100),glass,1.12,.12,.72)
+    ring.rotation.set(.28,.35,-.18)
+    const satellite=mesh(new THREE.TorusGeometry(.43,.09,20,72),chrome,-2.02,-1.48,1.05)
+    satellite.rotation.set(.7,-.2,.16)
+    mesh(new THREE.SphereGeometry(.38,48,32),cream,1.82,1.48,.48)
+    const block=mesh(new RoundedBoxGeometry(.54,.54,.54,5,.12),orange,1.72,-1.36,.42)
+    block.rotation.set(.2,.36,.24)
+    const bead=mesh(new THREE.SphereGeometry(.12,24,16),chrome,-.62,1.76,.62)
     bead.name='counterweight'
     let dragging=false, pointer=-1, x=0,y=0, velocity=0,lastMove=0, visible=true, paused=false
     let last=0
@@ -125,3 +125,4 @@ export function mountHeroScene(host: HTMLElement): () => void {
     return dispose
   } catch(error) {dispose();console.warn('3D unavailable; showing static fallback.',error);return ()=>undefined}
 }
+
