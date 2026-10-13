@@ -83,7 +83,7 @@ export const projects: Record<string, Project> = {
     objective: 'Создать ощущение движения и насыщенной городской программы через повторяющиеся графические мотивы и фотографию фестиваля.',
     requiredCopy: ['РИТМ ГОРОДА', '12–13 июля', 'Парк Центральный', 'Музыка', 'Дизайн', 'Маркет', 'Стрит-арт'],
     constraints: ['Используйте один повторяющийся мотив как связующую систему.', 'Сделайте один заметный сбой ритма.', 'Сохраните дату и название площадки читаемыми.'],
-    guidance: ['Выберите шаг повторения: форма, цвет, направление или интервалы.', 'Пусть фотографии и крупные блоки задают темп, а мелкие маркеры его поддерживают.', 'Нарушьте последовательность один раз, чтобы создать акцент.'],
+    guidance: ['Выберите шаг повторения: форма, цвет, направление или интервалы.', 'Повторите один мотив 5–6 раз с одинаковым интервалом. Затем измените один элемент и сравните результат.', 'Нарушьте последовательность один раз, чтобы создать акцент.'],
   },
   color: {
     client: 'Местные производители и парк «Изумрудный»',
@@ -95,7 +95,7 @@ export const projects: Record<string, Project> = {
     requiredCopy: ['ЛЕТНИЙ МАРКЕТ', '20–21 июля', '11:00–20:00', 'Локальные бренды', 'Еда', 'Растения', 'Музыка', 'Парк «Изумрудный»'],
     constraints: ['Основные цвета: #F4F1E8, #263D2B, #E8A83E, #D7694D, #161616.', 'Оставьте не более четырёх цветов активными одновременно.', 'Важный текст должен контрастировать с подложкой.'],
     palette: ['#F4F1E8', '#263D2B', '#E8A83E', '#D7694D', '#161616'],
-    guidance: ['Назначьте каждой краске роль: фон, текст, акцент или поддержка.', 'Подберите натуральные визуальные материалы к палитре.', 'Проверьте контраст текста на каждом выбранном фоне.'],
+    guidance: ['Назначьте каждой краске роль: фон, текст, акцент или поддержка.', 'Начните с двух основных цветов и одного акцента. Фотография необязательна: цвет может работать через типографику и формы.', 'Проверьте контраст текста на каждом выбранном фоне.'],
   },
   grid: {
     client: 'Сообщество дизайнеров Барнаула',
@@ -110,6 +110,15 @@ export const projects: Record<string, Project> = {
   },
 }
 
+const studioGuidance: Record<string,string[]> = {
+  composition: ['Сделайте два варианта: в первом взгляд ведёт заголовок, во втором — изображение. Меняйте масштаб и расположение, сохраняя весь текст.', 'Посмотрите на каждый вариант в масштабе 25%. Название, даты и место должны находиться без поиска.', 'Выберите один вариант. Уберите элемент, без которого идея остаётся понятной. Сохраните итоговую афишу.'],
+  hierarchy: ['Выстройте порядок чтения: тема → формат → спикер → дата и место. Не делайте все строки жирными.', 'Ограничьтесь одной гарнитурой и тремя основными размерами. Длинную должность разбейте по смыслу.', 'Уменьшите макет. За три секунды должны считываться тема и дата; остальные сведения — при внимательном чтении.'],
+  balance: ['Переместите фотографию к одному краю. На противоположной стороне соберите имена артистов в компактную группу.', 'Сравните визуальный вес: яркое небольшое пятно может уравновесить большое тёмное. Центрировать все элементы не требуется.', 'Проверьте название и время на тёмном фоне. Оставьте пустой участок, чтобы афиша не превратилась в сплошной шум.'],
+  rhythm: ['Соберите ряд из пяти или шести одинаковых модулей. Сначала выровняйте интервалы, затем измените один модуль.', 'Повторите выбранный шаг в типографике: программа и даты должны поддерживать ритм, а не спорить с ним.', 'Сравните ровный повтор и вариант с одним сбоем. Выберите тот, в котором акцент помогает найти важную информацию.'],
+  color: ['Выберите три цвета из палитры: светлый фон, тёмный текст и один акцент. Остальные пока не используйте.', 'Сделайте второй вариант с другим акцентом. Сравните настроение, не меняя расположение объектов.', 'Оставьте более убедительный вариант. Проверьте мелкий текст: цвет не должен быть единственным способом выделить дату.'],
+  grid: ['Включите сетку. Привяжите название, изображение, описание и программу к общим вертикалям.', 'Выберите один интервал для строк программы. Время и название доклада должны образовать повторяемую структуру.', 'Скройте сетку и проверьте порядок чтения. Если выравнивание распадается без линий, исправьте края блоков.'],
+}
+Object.entries(studioGuidance).forEach(([id,guidance]) => { projects[id].guidance=guidance })
 export function starterFor(_id: string, source: DesignObject[]): DesignObject[] {
   // Keep the assignment-specific authored starter intact; draft normalization handles older saved projects.
   return source.map(item => ({ ...item }))
@@ -150,7 +159,7 @@ function taskCriterion(id: string, objects: DesignObject[], background: string):
     case 'balance': {
       const largest = [...visuals].sort((a,b)=>b.width*b.height-a.width*a.height)[0]
       const offCenter = largest ? Math.abs(largest.x+largest.width/2-330) > 65 : false
-      const counterweight = visuals.some((item) => item !== largest && Math.abs(item.x+item.width/2-330) > 90)
+      const counterweight = objects.some((item) => item !== largest && Math.abs(item.x+item.width/2-330) > 90)
       return { label:'Асимметричный баланс', points: offCenter && counterweight ? 20 : offCenter || counterweight ? 13 : 7, detail: offCenter && counterweight ? 'Крупная масса смещена, а контрастные детали удерживают равновесие.' : 'Сместите доминанту и уравновесьте её меньшей группой, направлением или свободным полем.' }
     }
     case 'rhythm': {
@@ -161,10 +170,10 @@ function taskCriterion(id: string, objects: DesignObject[], background: string):
       return { label:'Ритм · повтор и сбой', points: shapes.length >= 5 && variety ? 20 : shapes.length >= 3 ? 14 : 7, detail: shapes.length >= 5 && variety ? 'Повтор считывается, элементы меняют масштаб или шаг.' : 'Соберите серию из пяти мотивов, выдержите интервал и один мотив измените.' }
     }
     case 'color': {
-      const colors = new Set([background, ...visuals.map(item => item.background)].filter((color):color is string=>typeof color==='string'&&/^#[0-9a-f]{6}$/i.test(color)))
+      const colors = new Set([background, ...objects.filter(item => item.type === 'shape').map(item => item.background), ...text.map(item => item.color)].filter((color):color is string=>typeof color==='string'&&/^#[0-9a-f]{6}$/i.test(color)))
       const palette = projects.color.palette ?? []
       const familiar = [...colors].every(color => palette.some(value => value.toLowerCase() === String(color).toLowerCase()))
-      return { label:'Цветовая система', points: colors.size >= 2 && colors.size <= 5 && familiar ? 20 : colors.size >= 2 && colors.size <= 5 ? 15 : 7, detail: colors.size <= 4 && familiar ? 'Цвета взяты из заданной палитры и работают как система.' : 'Ограничьте палитру четырьмя оттенками и назначьте им отдельные роли.' }
+      return { label:'Цветовая система', points: colors.size >= 2 && colors.size <= 4 && familiar ? 20 : colors.size >= 2 && colors.size <= 4 ? 15 : 7, detail: colors.size <= 4 && familiar ? 'Цвета взяты из заданной палитры и работают как система.' : 'Ограничьте палитру четырьмя оттенками и назначьте им отдельные роли.' }
     }
     case 'grid': {
       const aligned = objects.filter(item => [55,250,445].some(line => Math.abs(item.x-line) <= 16)).length
@@ -173,7 +182,7 @@ function taskCriterion(id: string, objects: DesignObject[], background: string):
     }
     default: {
       const largest = [...visuals].sort((a,b)=>b.width*b.height-a.width*a.height)[0]
-      const focal = Boolean(largest && largest.width*largest.height >= 30000 && visuals.length >= 3)
+      const focal = Boolean(largest && largest.width*largest.height >= 30000 && visuals.length >= 1)
       return { label:'Композиционный центр', points: focal ? 20 : visuals.length >= 2 ? 14 : 7, detail: focal ? 'Выстроена крупная доминанта и поддерживающие её визуальные массы.' : 'Выберите главную доминанту и поддержите её несколькими меньшими элементами.' }
     }
   }
@@ -187,23 +196,25 @@ export function evaluateProject(id: string, objects: DesignObject[], initial: De
   const found = project.requiredCopy.filter(value => copy.includes(normalize(value)))
   const missing = project.requiredCopy.filter(value => !copy.includes(normalize(value)))
   const infoPoints = Math.round(20 * found.length / Math.max(1, project.requiredCopy.length))
-  const outside = objects.filter(item => !boundsInside(item)).length
+  const outside = textObjects.filter(item => !boundsInside(item)).length
   const small = textObjects.filter(item => (item.fontSize ?? 16) < 12).length
   const textCollisions = textObjects.reduce((count, item, index) => count + (textObjects.slice(index+1).some(other => overlap(item,other) > Math.min(item.width*item.height,other.width*other.height)*.2) ? 1 : 0), 0)
   const lowContrast = textObjects.filter(item => {
     const foreground = brightness(item.color ?? '#111111')
-    const backing = brightness(background)
+        const index=objects.indexOf(item)
+    const backingShape=objects.slice(0,index).reverse().find(candidate=>candidate.type==='shape' && candidate.x<=item.x && candidate.y<=item.y && candidate.x+candidate.width>=item.x+item.width && candidate.y+candidate.height>=item.y+item.height && (candidate.opacity??1)>=.95)
+    const backing = brightness(backingShape?.background ?? background)
     return (Math.max(foreground,backing)+.05)/(Math.min(foreground,backing)+.05) < 3.2
   }).length
   const craftPoints = Math.max(0, 20 - outside*6 - small*3 - textCollisions*5 - lowContrast*2)
   const photos = objects.filter(item => item.type === 'photo' && Boolean(item.imageSrc)).length
-  const graphics = objects.filter(item => item.type === 'photo' && item.imageSrc && item.materialKind !== 'photo').length
-  const visualPoints = Math.min(20, photos ? 10 + Math.min(6, graphics*2) + (visualObjects.length >= 4 ? 4 : 0) : Math.min(12,visualObjects.length*3))
+  const usableVisuals = visualObjects.filter(item => item.width >= 20 && item.height >= 8 && item.x + item.width > 0 && item.y + item.height > 0 && item.x < 660 && item.y < 930).length
+  const visualPoints = usableVisuals > 0 || textObjects.length >= 4 ? 20 : 8
   const baseline = new Map(initial.map(item => [item.id,item]))
   const changed = objects.filter(item => {
     const before = baseline.get(item.id)
     if (!before) return true
-    return Math.abs(item.x-before.x) > 18 || Math.abs(item.y-before.y) > 18 || Math.abs(item.width-before.width) > 18 || Math.abs(item.height-before.height) > 18 || item.text !== before.text || item.color !== before.color || item.imageSrc !== before.imageSrc || Math.abs((item.fontSize??0)-(before.fontSize??0)) > 3
+    return Math.abs(item.x-before.x) > 18 || Math.abs(item.y-before.y) > 18 || ((item.type === 'photo' || item.type === 'shape') && Math.abs(item.width-before.width) > 18) || ((item.type === 'photo' || item.type === 'shape') && Math.abs(item.height-before.height) > 18) || ((item.type === 'text' || item.type === 'date') && (item.text !== before.text || item.color !== before.color || Math.abs((item.fontSize??0)-(before.fontSize??0)) > 3 || item.fontFamily !== before.fontFamily || item.fontWeight !== before.fontWeight)) || (item.type === 'photo' && item.imageSrc !== before.imageSrc) || (item.type === 'shape' && item.background !== before.background) || Math.abs((item.rotation??0)-(before.rotation??0)) > 3
   }).length + initial.filter(item => !objects.some(current => current.id === item.id)).length
   const processPoints = changed >= 5 ? 20 : changed >= 3 ? 15 : changed >= 1 ? 10 : 4
   const specialized = taskCriterion(id,objects,background)
@@ -211,17 +222,17 @@ export function evaluateProject(id: string, objects: DesignObject[], initial: De
     {label:'Обязательная информация',points:infoPoints,detail:missing.length ? `Добавьте в макет: ${missing.slice(0,3).join(' · ')}${missing.length > 3 ? ' и ещё' : ''}.` : 'Все пункты брифа присутствуют.'},
     {label:'Читаемость и поля',points:craftPoints,detail:outside || small || textCollisions || lowContrast ? `За форматом: ${outside}; пересечения текста: ${textCollisions}; слабый контраст: ${lowContrast}.` : 'Текст находится в безопасных полях, контраст и порядок чтения сохранены.'},
     specialized,
-    {label:'Визуальные материалы',points:visualPoints,detail:photos ? `Фото и исходники встроены в композицию (${photos} изображений).` : 'Добавьте фотографию из библиотеки материалов и поддерживающую графику.'},
+    {label:'Визуальное решение',points:visualPoints,detail:photos ? 'Изображения присутствуют. Проверьте, что каждое поддерживает идею и не мешает чтению.' : 'Типографическое решение допустимо. Дополнительные изображения не обязательны.'},
     {label:'Авторская сборка',points:processPoints,detail:changed >= 3 ? `Вы заметно переработали ${changed} элементов исходного макета.` : 'Измените композицию и типографику исходного макета, чтобы найти собственное решение.'},
   ]
   const score = Math.round(items.reduce((sum,item)=>sum+item.points,0))
-  const passed = score >= 70 && infoPoints >= 12 && craftPoints >= 10
+  const passed = score >= 70 && infoPoints >= 16 && craftPoints >= 10 && changed >= 1
   const strengths = items.filter(item => item.points >= 15).map(item => item.label)
   const recommendations = [
     ...(missing.length ? [`Добавьте ${missing.slice(0,2).join(' и ')} — зритель должен быстро получить всю информацию о событии.`] : []),
     ...(outside || textCollisions || lowContrast || small ? ['Проверьте поля и контраст: важная информация должна читаться в уменьшенной афише и при печати.'] : []),
     ...(specialized.points < 18 ? [specialized.detail] : []),
-    ...(!photos || graphics < 2 ? ['Возьмите фотографию и 1–2 графических исходника из библиотеки — это даст макету фактуру и связь с темой.'] : []),
+    ...(usableVisuals > 7 ? ['Проверьте, нужен ли каждый визуальный элемент: количество изображений не повышает оценку.'] : []),
     ...(changed < 5 ? ['Попробуйте ещё один вариант: переставьте главный визуал, измените масштаб заголовка и сравните маршрут взгляда.'] : []),
   ].slice(0,5)
   const next = recommendations[0] ?? (passed ? 'Сохраните PNG и подготовьте второй вариант с другим визуальным акцентом.' : 'Проверьте обязательные пункты брифа и критерии выше.')

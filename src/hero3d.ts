@@ -1,136 +1,127 @@
 import * as THREE from 'three'
+import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js'
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js'
 
-/** A still, physically lit poster with real thickness and generated artwork. */
+/** A real, freely inspectable assembly: each part has depth and its own material. */
 export function mountHeroScene(host: HTMLElement): () => void {
-  let renderer: THREE.WebGLRenderer | null = null
-  let alive = true
-  const resources: Array<{ dispose: () => void }> = []
-
+  const resources: Array<{dispose():void}> = []
+  const events = new AbortController()
+  let renderer: THREE.WebGLRenderer | undefined
+  let frame = 0
+  let observer: ResizeObserver | undefined
+  let visibility: IntersectionObserver | undefined
+  const dispose = () => {
+    cancelAnimationFrame(frame); events.abort(); observer?.disconnect(); visibility?.disconnect()
+    resources.forEach(item => item.dispose()); renderer?.dispose(); renderer?.domElement.remove()
+    host.removeAttribute('data-hero-3d-ready')
+  }
   try {
-    const scene = new THREE.Scene()
-    const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 80)
-    const group = new THREE.Group()
-    group.rotation.set(0.035, -0.13, -0.018)
-    scene.add(group)
-
-    renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'low-power' })
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.7))
-    renderer.outputColorSpace = THREE.SRGBColorSpace
-    renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 1.08
-    renderer.domElement.className = 'hero-3d-canvas'
-    renderer.domElement.setAttribute('role', 'img')
-    renderer.domElement.setAttribute('aria-label', 'Объёмный постер с авторской графической композицией')
-    host.append(renderer.domElement)
-
-    const paperTexture = createPaperTexture(() => {
-      if (alive && renderer) renderer.render(scene, camera)
+    renderer = new THREE.WebGLRenderer({alpha:true,antialias:true,powerPreference:'low-power'})
+    renderer.setPixelRatio(Math.min(devicePixelRatio,1.6))
+    renderer.outputColorSpace=THREE.SRGBColorSpace
+    renderer.toneMapping=THREE.ACESFilmicToneMapping
+    renderer.toneMappingExposure=1.15
+    const canvas=renderer.domElement
+    canvas.className='hero-3d-canvas'; canvas.tabIndex=0
+    canvas.setAttribute('role','img')
+    canvas.setAttribute('aria-label','Объёмная сборка: металлическая лента, стеклянное кольцо и керамические модули. Вращайте мышью, пальцем или клавишами стрелок.')
+    host.append(canvas)
+    const scene=new THREE.Scene()
+    const camera=new THREE.PerspectiveCamera(35,1,.1,60)
+    const environment=new RoomEnvironment()
+    const pmrem=new THREE.PMREMGenerator(renderer)
+    const env=pmrem.fromScene(environment,.04)
+    scene.environment=env.texture
+    resources.push(env); environment.dispose(); pmrem.dispose()
+    scene.add(new THREE.HemisphereLight(0xf3eaff,0x42466b,2))
+    const key=new THREE.DirectionalLight(0xffffff,4); key.position.set(-3,5,6); scene.add(key)
+    const rim=new THREE.DirectionalLight(0xb7c5ff,3); rim.position.set(4,1,-3); scene.add(rim)
+    const assembly=new THREE.Group(); assembly.rotation.set(.12,-.3,-.12); scene.add(assembly)
+    const material=(options:THREE.MeshPhysicalMaterialParameters)=>{
+      const value=new THREE.MeshPhysicalMaterial(options); resources.push(value); return value
+    }
+    const blue=material({color:0x3a35dc,metalness:.7,roughness:.24,clearcoat:1,clearcoatRoughness:.16,side:THREE.DoubleSide})
+    const chrome=material({color:0xe2e4f5,metalness:1,roughness:.17})
+    const cream=material({color:0xf2e4ca,roughness:.29,clearcoat:.7})
+    const orange=material({color:0xff6029,roughness:.25,clearcoat:1})
+    const glass=material({color:0xc0b5ff,metalness:.05,roughness:.1,transmission:.8,thickness:1.2,ior:1.45})
+    const mesh=(geometry:THREE.BufferGeometry,mat:THREE.Material,x=0,y=0,z=0)=>{
+      resources.push(geometry); const object=new THREE.Mesh(geometry,mat)
+      object.position.set(x,y,z); assembly.add(object); return object
+    }
+    // A twisted closed ribbon, with real cross-section thickness and bevelled edges.
+    const ribbonShape=new THREE.Shape()
+    ribbonShape.moveTo(-.42,-.055); ribbonShape.lineTo(.42,-.055)
+    ribbonShape.quadraticCurveTo(.46,0,.42,.055); ribbonShape.lineTo(-.42,.055)
+    ribbonShape.quadraticCurveTo(-.46,0,-.42,-.055)
+    const points=Array.from({length:97},(_,i)=>{
+      const t=i/96*Math.PI*2
+      return new THREE.Vector3(1.55*Math.cos(t),1.9*Math.sin(t),.6*Math.sin(2*t))
     })
-    paperTexture.anisotropy = renderer.capabilities.getMaxAnisotropy()
-    const edge = new THREE.MeshPhysicalMaterial({ color: 0xe7e2da, roughness: 0.84, clearcoat: 0.08 })
-    const front = new THREE.MeshPhysicalMaterial({ map: paperTexture, roughness: 0.9, clearcoat: 0.06, clearcoatRoughness: 0.7 })
-    const back = new THREE.MeshStandardMaterial({ color: 0xece8e0, roughness: 0.92 })
-    resources.push(paperTexture, edge, front, back)
-
-    // A single extruded board carries the image as its front-face texture.
-    const boardGeometry = new THREE.BoxGeometry(5, 7.06, 0.13)
-    const board = new THREE.Mesh(boardGeometry, [edge, edge, edge, edge, front, back])
-    board.castShadow = true
-    board.receiveShadow = true
-    group.add(board)
-    resources.push(boardGeometry)
-
-    scene.add(new THREE.HemisphereLight(0xfff8ef, 0x3d354b, 1.55))
-    const keyLight = new THREE.DirectionalLight(0xfff5e9, 3.1)
-    keyLight.position.set(-3.8, 5.5, 7)
-    scene.add(keyLight)
-    const fillLight = new THREE.DirectionalLight(0xbcaaff, 0.72)
-    fillLight.position.set(4.5, 0.5, 5)
-    scene.add(fillLight)
-
-    const resize = () => {
-      if (!renderer) return
-      const { width, height } = host.getBoundingClientRect()
-      if (width < 1 || height < 1) return
-      renderer.setSize(width, height, false)
-      camera.aspect = width / height
-      const requiredHeight = Math.max(7.06 / 0.82, 5 / Math.max(camera.aspect, 0.55) / 0.82)
-      camera.position.set(0, 0, requiredHeight / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))) + 0.13)
-      camera.lookAt(0, 0, 0)
-      camera.updateProjectionMatrix()
-      renderer.render(scene, camera)
+    const path=new THREE.CatmullRomCurve3(points,true,'centripetal')
+    const rawRibbon=new THREE.ExtrudeGeometry(ribbonShape,{steps:240,extrudePath:path,bevelEnabled:false})
+    rawRibbon.deleteAttribute('normal'); rawRibbon.deleteAttribute('uv')
+    const smoothRibbon=mergeVertices(rawRibbon); smoothRibbon.computeVertexNormals(); rawRibbon.dispose()
+    const ribbon=mesh(smoothRibbon,blue,-.1,.12,0)
+    ribbon.rotation.z=.32
+    const ring=mesh(new THREE.TorusGeometry(1.13,.21,24,100),glass,.68,-.38,.65)
+    ring.rotation.set(.62,.72,-.4)
+    const satellite=mesh(new THREE.TorusGeometry(.66,.105,20,72),chrome,-1.25,-1.14,.5)
+    satellite.rotation.set(.9,-.25,.2)
+    mesh(new THREE.SphereGeometry(.57,48,32),cream,.7,1.25,.56)
+    const block=mesh(new RoundedBoxGeometry(.8,.8,.8,4,.14),orange,1.22,-1.13,.65)
+    block.rotation.set(.25,.5,.3)
+    const bead=mesh(new THREE.SphereGeometry(.17,24,16),chrome,-1.7,.75,.45)
+    bead.name='counterweight'
+    let dragging=false, pointer=-1, x=0,y=0, velocity=0,lastMove=0, visible=true, paused=false
+    let last=0
+    const reduced=matchMedia('(prefers-reduced-motion: reduce)')
+    paused=reduced.matches
+    const control=host.querySelector<HTMLButtonElement>('[data-hero-motion]')
+    const updateControl=()=>{if(control){control.textContent=paused?'Вращать':'Пауза';control.setAttribute('aria-pressed',String(!paused))}}
+    const draw=()=>renderer?.render(scene,camera)
+    const tick=(time:number)=>{
+      const dt=Math.min((time-last)/1000,.04);last=time
+      if(visible&&!document.hidden){
+        if(!dragging){assembly.rotation.y+=velocity*dt;velocity*=Math.exp(-dt*5);if(!paused)assembly.rotation.y+=dt*.17}
+        draw()
+      }
+      frame=requestAnimationFrame(tick)
     }
-    const observer = new ResizeObserver(resize)
-    observer.observe(host)
-    resize()
-    host.setAttribute('data-hero-3d-ready', 'true')
-
-    return () => {
-      alive = false
-      observer.disconnect()
-      host.removeAttribute('data-hero-3d-ready')
-      renderer?.dispose()
-      renderer?.domElement.remove()
-      resources.forEach(resource => resource.dispose())
-      renderer = null
-    }
-  } catch (error) {
-    alive = false
-    renderer?.dispose()
-    renderer?.domElement.remove()
-    console.warn('3D hero preview fell back to its poster artwork.', error)
-    return () => undefined
-  }
-}
-
-function createPaperTexture(onArtworkReady: () => void): THREE.CanvasTexture {
-  const canvas = document.createElement('canvas')
-  canvas.width = 1000
-  canvas.height = 1412
-  const context = canvas.getContext('2d')!
-  context.fillStyle = '#f1eee7'
-  context.fillRect(0, 0, canvas.width, canvas.height)
-
-  context.fillStyle = '#24212a'
-  context.font = '600 24px "DM Mono", monospace'
-  context.fillText('ЗАДАНИЕ 01', 62, 84)
-  context.textAlign = 'right'
-  context.fillStyle = '#77717a'
-  context.fillText('ПОСТЕР / A3', 936, 84)
-  context.textAlign = 'left'
-
-  context.fillStyle = '#e9e3dc'
-  context.fillRect(58, 142, 884, 994)
-  context.fillStyle = '#211d26'
-  context.font = '800 84px "Inter", "Arial", sans-serif'
-  context.fillText('COMPOSITION', 62, 1240)
-  context.fillText('STUDY', 62, 1322)
-  context.fillStyle = '#827b87'
-  context.font = '500 19px "DM Mono", monospace'
-  context.fillText('FORM  /  SPACE  /  BALANCE', 64, 1372)
-  context.fillStyle = '#a88aff'
-  context.beginPath(); context.arc(930, 1364, 8, 0, Math.PI * 2); context.fill()
-
-  const texture = new THREE.CanvasTexture(canvas)
-  texture.colorSpace = THREE.SRGBColorSpace
-  texture.needsUpdate = true
-
-  const artwork = new Image()
-  artwork.onload = () => {
-    const targetAspect = 884 / 994
-    const sourceAspect = artwork.width / artwork.height
-    let sx = 0, sy = 0, sw = artwork.width, sh = artwork.height
-    if (sourceAspect > targetAspect) {
-      sw = artwork.height * targetAspect
-      sx = (artwork.width - sw) / 2
-    } else {
-      sh = artwork.width / targetAspect
-      sy = (artwork.height - sh) / 2
-    }
-    context.drawImage(artwork, sx, sy, sw, sh, 58, 142, 884, 994)
-    texture.needsUpdate = true
-    onArtworkReady()
-  }
-  artwork.src = new URL('./assets/hero-artwork.png', import.meta.url).href
-  return texture
+    const opts={signal:events.signal}
+    canvas.addEventListener('pointerdown',e=>{
+      if(dragging||e.button!==0)return
+      dragging=true;pointer=e.pointerId;x=e.clientX;y=e.clientY;velocity=0;lastMove=performance.now()
+      canvas.setPointerCapture(pointer);canvas.classList.add('is-grabbing')
+    },opts)
+    canvas.addEventListener('pointermove',e=>{
+      if(!dragging||e.pointerId!==pointer)return
+      const now=performance.now(),dx=e.clientX-x
+      assembly.rotation.y+=dx*.008
+      assembly.rotation.x=THREE.MathUtils.clamp(assembly.rotation.x+(e.clientY-y)*.006,-1.1,1.1)
+      velocity=THREE.MathUtils.clamp(dx*.008/Math.max(.008,(now-lastMove)/1000),-3,3)
+      x=e.clientX;y=e.clientY;lastMove=now;draw()
+    },opts)
+    const release=(e:PointerEvent)=>{if(e.pointerId!==pointer)return;dragging=false;pointer=-1;if(performance.now()-lastMove>100||reduced.matches)velocity=0;canvas.classList.remove('is-grabbing')}
+    canvas.addEventListener('pointerup',release,opts);canvas.addEventListener('pointercancel',release,opts);canvas.addEventListener('lostpointercapture',release,opts)
+    canvas.addEventListener('keydown',e=>{
+      if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home'].includes(e.key))return
+      e.preventDefault();velocity=0
+      if(e.key==='Home')assembly.rotation.set(.12,-.3,-.12)
+      else if(e.key==='ArrowLeft'||e.key==='ArrowRight')assembly.rotation.y+=e.key==='ArrowLeft'?-.15:.15
+      else assembly.rotation.x=THREE.MathUtils.clamp(assembly.rotation.x+(e.key==='ArrowUp'?-.15:.15),-1.1,1.1)
+      draw()
+    },opts)
+    control?.addEventListener('click',()=>{paused=!paused;velocity=0;updateControl()},opts)
+    reduced.addEventListener('change',()=>{paused=reduced.matches;velocity=0;updateControl()},opts)
+    const resize=()=>{const {width,height}=host.getBoundingClientRect();if(!width||!height)return
+      renderer!.setSize(width,height,false);camera.aspect=width/height
+      camera.position.set(0,0,Math.max(8.4,8.1/camera.aspect));camera.lookAt(0,0,0);camera.updateProjectionMatrix();draw()}
+    observer=new ResizeObserver(resize);observer.observe(host)
+    visibility=new IntersectionObserver(entries=>{visible=entries[0].isIntersecting});visibility.observe(host)
+    canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();dispose()},opts)
+    resize();updateControl();host.setAttribute('data-hero-3d-ready','true');frame=requestAnimationFrame(tick)
+    return dispose
+  } catch(error) {dispose();console.warn('3D unavailable; showing static fallback.',error);return ()=>undefined}
 }

@@ -1,4 +1,6 @@
 import './style.css'
+let disposeHero: (() => void) | undefined
+let heroGeneration = 0
 import { toBlob } from 'html-to-image'
 import { evaluateProject, projects, starterFor, type Evaluation } from './assignments'
 import { allTaskMaterialSources, materialFor, taskMaterials, type TaskMaterial } from './task-assets'
@@ -393,7 +395,7 @@ function materialLayer(taskId:string,assetId:string,id:string,name:string,x:numb
   return {id,type:'photo',name,x,y,width:width??item.width,height:height??item.height,rotation:0,opacity:1,background:'#f2f0e9',radius:item.radius??0,imageSrc:item.src,fit:item.fit,assetId:item.id,materialKind:item.kind,...extra}
 }
 
-const makeInitialObjects = (): EditorObject[] => {
+const makeBaseObjects = (): EditorObject[] => {
   switch (selectedTask.id) {
     case 'composition': return [
       materialLayer('composition','exhibition-photo','c-photo','Архитектура выставки',48,270,564,385,{fit:'cover'}),
@@ -483,6 +485,40 @@ const makeInitialObjects = (): EditorObject[] => {
   }
 }
 
+const makeInitialObjects = (): EditorObject[] => {
+  const removed = new Set(['c-arch','c-prism','c-metal','h-portrait','h-specimen','b-smoke','b-chrome','b-light','b-cable','r-ribbon','r-steps','r-sun','m-basil','m-flower','m-lemons','m-ceramic','g-speaker-a','g-speaker-b','g-sculpture','g-camera'])
+  const result = makeBaseObjects().filter(item => !removed.has(item.id))
+  const layouts: Record<string,Partial<EditorObject>> = {
+    'c-title':{text:'ГОРОД\nФОРМ',x:44,y:72,width:570,height:178,fontSize:88,lineHeight:.92,letterSpacing:-4},
+    'c-sub':{x:48,y:267,fontSize:18,width:550,height:28},'c-photo':{x:48,y:327,width:564,height:340},
+    'c-date':{y:709,fontSize:28},'c-place':{y:766},'c-address':{y:801},'c-logo':{x:428,y:842,width:184,height:44},'c-free':{y:849},
+    'h-title':{x:46,y:95,fontSize:50,lineHeight:1,width:570,height:112},'h-photo':{x:330,y:307,width:282,height:370},
+    'h-sub':{x:49,y:230,width:550,height:32,fontSize:17},'h-name':{x:48,y:370,width:260,height:74,text:'Анна\nВласова',fontSize:33,lineHeight:1.05},
+    'h-role':{x:48,y:461,width:238,height:55,text:'арт-директор\nForma Studio',fontSize:16,lineHeight:1.3},'h-kicker':{fontSize:12,letterSpacing:.8},
+    'b-title':{x:46,y:111,width:566,height:159,fontSize:76,lineHeight:.94},'b-photo':{x:48,y:324,width:348,height:357},
+    'b-djs':{x:431,y:382,width:179,height:140,text:'RADIUS /\nNEON /\nKOSMO /\nAURA',fontSize:20,lineHeight:1.5},'b-kicker':{fontSize:12,letterSpacing:.7},'b-logo':{width:184,x:427},
+    'r-photo':{x:48,y:346,width:564,height:251},'r-title':{x:44,y:111,width:570,height:153,fontSize:73,lineHeight:.94},
+    'r-logo':{x:427,y:48,width:184,height:44},'r-arrow':{x:48,y:616,width:104,height:52},'r-date':{x:48,y:713},'r-place':{x:48,y:760},
+    'r-program':{x:343,y:713,width:266,height:80,fontSize:17,lineHeight:1.5},'r-edition':{x:48,y:855,width:560,fontSize:12,letterSpacing:.5},
+    'm-title':{x:44,y:101,width:550,height:132,fontSize:67,lineHeight:.94},'m-kicker':{fontSize:12,letterSpacing:.7},
+    'm-photo':{x:48,y:295,width:564,height:336},'m-logo':{x:428,y:839,width:184,height:46},'m-dates':{x:48,y:689,width:564,fontSize:23},
+    'm-program':{x:48,y:748,width:500,height:62,fontSize:17,lineHeight:1.45},'m-place':{x:48,y:851,width:355,fontSize:17},
+    'g-title':{x:46,y:112,width:568,height:143,fontSize:67,lineHeight:.94},'g-photo':{x:48,y:291,width:564,height:199},
+    'g-intro':{x:48,y:520,width:550,height:48,fontSize:16,lineHeight:1.3},'g-schedule-title':{y:596,fontSize:12},
+    'g-schedule-a':{x:48,y:638,width:564,fontSize:17},'g-schedule-b':{x:48,y:677,width:564,fontSize:17},
+    'g-schedule-c':{x:48,y:716,width:564,fontSize:17},'g-schedule-d':{x:48,y:755,width:564,fontSize:17},
+    'g-venue':{x:48,y:839,width:340,fontSize:17},'g-site':{x:425,y:840,width:187,fontSize:14},'g-logo':{x:428,y:46,width:184,height:44},'g-kicker':{fontSize:12,letterSpacing:.6},
+  }
+  result.forEach(item=>Object.assign(item,layouts[item.id]??{}))
+  const rule=(id:string,x:number,y:number,width:number,height:number,color:string):EditorObject=>({id,type:'shape',name:height<=5?'Линия разделения':'Ритмический модуль',x,y,width,height,rotation:0,background:color,radius:0})
+  const rules:Record<string,EditorObject[]>={
+    composition:[rule('c-rule',48,693,564,2,'#20201e')],hierarchy:[rule('h-rule',48,705,564,2,'#171719')],
+    balance:[rule('b-accent',432,330,176,5,'#f5d394')],color:[rule('m-rule',48,657,564,3,'#263d2b')],
+    grid:[rule('g-rule',48,812,564,2,'#14213d')],
+    rhythm:Array.from({length:6},(_,i)=>rule('r-beat-'+i,48+i*96,290,68,i===4?34:14,i===4?'#e1623b':'#202a22')),
+  }
+  return [...(rules[selectedTask.id]??[]),...result]
+}
 let posterBackground = '#f2f0e9'
 let objects: EditorObject[] = starterFor(selectedTask.id, makeInitialObjects())
 
@@ -893,6 +929,8 @@ function openTask(task: Task) {
 }
 
 function render() {
+  disposeHero?.(); disposeHero = undefined
+  const generation = ++heroGeneration
   workspaceObserver?.disconnect()
   const views: Record<Exclude<Screen, 'editor'>, () => string> = {
     home: renderHome,
@@ -904,6 +942,10 @@ function render() {
   }
   app.innerHTML = screen === 'editor' ? renderEditor() : views[screen]()
   bindEvents()
+  const heroHost = app.querySelector<HTMLElement>('[data-hero-scene]')
+  if (heroHost) void import('./hero3d').then(({mountHeroScene}) => {
+    if (generation === heroGeneration && heroHost.isConnected) disposeHero = mountHeroScene(heroHost)
+  }).catch(() => { /* Static fallback remains visible. */ })
   if (screen === 'editor') fitTextBoxes()
   requestAnimationFrame(() => {
     app.querySelectorAll('.reveal').forEach((el) => el.classList.add('is-visible'))
@@ -962,11 +1004,11 @@ function renderHome() {
           </div>
         </div>
 
-        <div class="hero-visual" role="img" aria-label="Объёмная композиция из синей ленты, стекла и геометрических форм">
+        <div class="hero-visual" data-hero-scene>
           <span class="hero-orbit hero-orbit-a" aria-hidden="true"></span>
           <span class="hero-orbit hero-orbit-b" aria-hidden="true"></span>
           <img class="hero-sculpture" src="${HERO_SCULPTURE_SRC}" alt="" aria-hidden="true">
-          <span class="hero-scene-caption" aria-hidden="true">ФОРМА · ЦВЕТ · РИТМ</span>
+          <div class="hero-scene-caption"><span>Вращайте, чтобы рассмотреть</span><button type="button" data-hero-motion aria-pressed="true">Пауза</button></div>
         </div>
       </section>
 
@@ -1025,7 +1067,7 @@ function renderTasks() {
   return `<main class="shell inner-shell">${renderPageHeader('03', 'Собирай на практике.', 'Выбирайте задачу, продолжайте начатое и сравнивайте свои результаты.', 'tasks')}
     <section class="task-list-page">
       <div class="task-filter-row"><div class="filter-pills" role="group" aria-label="Фильтр заданий"><button class="active" data-filter="all" aria-pressed="true">Все</button><button data-filter="Базовый" aria-pressed="false">Базовый</button><button data-filter="Средний" aria-pressed="false">Средний</button><button data-filter="Продвинутый" aria-pressed="false">Продвинутый</button></div><span class="list-counter" aria-live="polite">${tasks.length} МОДУЛЕЙ</span></div>
-      <div class="task-list">${tasks.map(task => `<article class="task-row-card reveal" data-level="${task.level}"><div class="task-row-icon accent-${task.accent}">${uiIcon(task.icon as keyof typeof UI_ICON_SVGS)}</div><div class="task-row-main"><div class="task-row-number">${task.number}</div><div><h2>${task.title}</h2><p>${task.description}</p><div class="task-meta"><span>${task.level}</span><span>${task.time}</span></div></div></div><div class="task-result"><span>РЕЗУЛЬТАТ</span><strong>${task.score || '—'}</strong></div><button class="task-row-action" data-task="${task.id}">${task.score || hasDraft(task.id) ? 'ПРОДОЛЖИТЬ' : 'НАЧАТЬ'} ${uiIcon('forward')}</button></article>`).join('')}</div>
+      <div class="task-list">${tasks.map(task => `<article class="task-row-card reveal" data-level="${task.level}"><div class="task-row-icon accent-${task.accent}">${uiIcon(task.icon as keyof typeof UI_ICON_SVGS)}</div><div class="task-row-main"><div class="task-row-number">${task.number}</div><div><h2>${projects[task.id].headline}</h2><p>${task.title} · ${projects[task.id].focus}</p><div class="task-meta"><span>${task.level}</span><span>${task.time}</span></div></div></div><div class="task-result"><span>РЕЗУЛЬТАТ</span><strong>${task.score || '—'}</strong></div><button class="task-row-action" data-task="${task.id}">${task.score || hasDraft(task.id) ? 'ПРОДОЛЖИТЬ' : 'НАЧАТЬ'} ${uiIcon('forward')}</button></article>`).join('')}</div>
     </section>
   </main>`
 }
@@ -1164,7 +1206,7 @@ function renderEditor() {
         <div class="editor-top-actions">
           <div class="task-progress-mini" aria-label="Выполнено заданий"><strong>${String(tasks.filter(task => task.score > 0).length).padStart(2,'0')} / ${String(tasks.length).padStart(2,'0')}</strong></div>
           <button class="secondary-button" data-action="export" aria-label="Скачать постер в PNG">PNG ${uiIcon('forward')}</button>
-          <button class="primary-button" data-action="check">ПРОВЕРИТЬ РАБОТУ ${uiIcon('forward')}</button>
+          <button class="primary-button" data-action="check">Проверить ${uiIcon('forward')}</button>
         </div>
       </header>
 
@@ -1177,7 +1219,7 @@ function renderEditor() {
             <button data-add="date"><span class="element-icon">${uiIcon('date')}</span>Дата</button>
             <button data-add="shape"><span class="element-icon">${uiIcon('shape')}</span>Форма</button>
           </div>
-          ${renderMaterialLibrary()}
+          <details class="materials-drawer" open><summary>Материалы</summary>${renderMaterialLibrary()}</details>
 
           <div class="panel-divider"></div>
           <div class="panel-label">ИНСТРУМЕНТЫ</div>
@@ -1196,7 +1238,7 @@ function renderEditor() {
               <button data-action="redo" aria-label="Повторить" title="Повторить · Ctrl+Shift+Z" ${historyIndex >= history.length - 1 ? 'disabled' : ''}>↷</button>
             </div>
           </div>
-          <button class="reset-task-button" data-action="reset-task">Сбросить макет</button>
+          <button class="reset-task-button" data-action="reset-task">Новый исходный макет</button>
         </aside>
 
         <section class="workspace">
@@ -1231,7 +1273,7 @@ function renderEditor() {
               <div><span>Обязательный текст</span><b>${project.requiredCopy.map(escapeHtml).join(' · ')}</b></div>
               <div><span>Ограничения</span><b>${project.constraints.map(escapeHtml).join(' · ')}</b></div>
             </div>
-            <details class="brief-guidance"><summary>План работы и критерии</summary><ol>${project.guidance.map(step => `<li>${escapeHtml(step)}</li>`).join('')}</ol><p>Проверка: бриф · композиция · техника · визуальные материалы · авторская сборка.</p></details>
+            <details class="brief-guidance"><summary>Что сделать самостоятельно</summary><ol>${project.guidance.map(step => `<li>${escapeHtml(step)}</li>`).join('')}</ol><p>Автопроверка оценивает формальные признаки. Художественный выбор остаётся за вами; удачных решений может быть несколько.</p></details>
           </aside>
 
           <div class="canvas-stage" data-stage tabindex="0" aria-label="Рабочая область. Пробел и перетаскивание для перемещения, Ctrl и колесо для масштаба.">
@@ -1253,14 +1295,14 @@ function renderEditor() {
           <div class="panel-divider"></div>
           <div class="panel-label layer-heading">СЛОИ <span class="layer-count">${String(objects.length).padStart(2, '0')}</span></div>
           <div class="layers" data-layers role="listbox" aria-label="Слои макета">
-            ${[...objects].reverse().map((item, index) => `
+            ${[...objects].reverse().map((item) => `
               <div class="layer-row ${item.id === selectedId ? 'selected' : ''}" data-layer-id="${escapeHtml(item.id)}" data-select="${escapeHtml(item.id)}" role="option" aria-selected="${item.id === selectedId}" tabindex="0">
                 <button class="layer-grip" type="button" draggable="true" data-layer-grip="${escapeHtml(item.id)}" aria-label="Перетащить слой: ${escapeHtml(item.name)}" title="Перетащить слой">
                   <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="5" cy="4" r="1.1"/><circle cx="11" cy="4" r="1.1"/><circle cx="5" cy="8" r="1.1"/><circle cx="11" cy="8" r="1.1"/><circle cx="5" cy="12" r="1.1"/><circle cx="11" cy="12" r="1.1"/></svg>
                 </button>
-                <span class="layer-index">${String(objects.length - index).padStart(2, '0')}</span>
+                <span class="layer-thumbnail" aria-hidden="true">${item.type === 'photo' && item.imageSrc ? '<img src="'+escapeHtml(item.imageSrc)+'" alt="">' : item.type === 'shape' ? '<i style="background:'+item.background+';border-radius:'+Math.min(item.radius??0,12)+'px"></i>' : 'T'}</span>
                 <span class="layer-name">${escapeHtml(item.name)}</span>
-                <span class="layer-type">${item.type.toUpperCase()}</span>
+                <span class="layer-type">${item.type === 'photo' ? 'Фото' : item.type === 'shape' ? 'Форма' : 'Текст'}</span>
               </div>
             `).join('')}
           </div>
@@ -1740,13 +1782,10 @@ function bindEvents() {
       if (action === 'hand') { handTool = !handTool; updateWorkspace() }
       if (action === 'toggle-brief') toggleTaskBrief()
       if (action === 'reset-task') {
-        if (!window.confirm('Начать это задание заново? Текущий макет будет заменён стартовым.')) return
-        try { localStorage.removeItem(draftKey()) } catch {}
+        if (!window.confirm('Открыть обновлённый исходный макет? Замену можно отменить кнопкой «Отменить», пока редактор открыт.')) return
         posterBackground = TASK_BACKGROUNDS[selectedTask.id] ?? '#f2f0e9'
         objects = starterFor(selectedTask.id, makeInitialObjects())
         selectedId = null
-        history = []
-        historyIndex = -1
         saveHistory()
         render()
       }
@@ -2316,7 +2355,7 @@ function showTheory(task: Task) {
       <button class="modal-close" data-close aria-label="Закрыть">${uiIcon('close')}</button>
       <div class="theory-modal-head">
         <div class="theory-modal-icon icon-${task.id}"><span>${uiIcon(task.icon as keyof typeof UI_ICON_SVGS)}</span></div>
-        <div><div class="modal-kicker">${task.number} / ${task.level.toUpperCase()}</div><h2>${task.title}</h2><p>${task.description}</p></div>
+        <div><div class="modal-kicker">${task.number} / ${task.level.toUpperCase()}</div><h2>${projects[task.id].headline}</h2><p>${task.title} · ${projects[task.id].focus}</p></div>
       </div>
       <div class="theory-body">
         <section><div class="theory-section-label">01 / ОСНОВА</div><p class="theory-lead">${task.theory[0]}</p><p class="theory-detail">${task.theory[1]}</p></section>
@@ -2471,7 +2510,7 @@ async function checkWork() {
     notify('Не удалось завершить проверку. Макет сохранён — попробуйте ещё раз')
   }finally{
     checkBusy=false
-    if(button){button.disabled=false;button.innerHTML=`ПРОВЕРИТЬ РАБОТУ ${uiIcon('forward')}`;delete button.dataset.originalLabel}
+    if(button){button.disabled=false;button.innerHTML=`Проверить ${uiIcon('forward')}`;delete button.dataset.originalLabel}
   }
 }
 
