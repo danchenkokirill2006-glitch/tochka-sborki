@@ -3644,8 +3644,8 @@ html[data-theme="light"] .home-shell .hero-scene-caption { color: rgba(65, 56, 8
 }
 
 /* Studio chrome: stable panels, quiet controls and actual layer previews. */
-.hero-3d-canvas{position:absolute;inset:0;width:100%;height:100%;z-index:2;cursor:grab;touch-action:pan-y;outline-offset:-5px}
-.hero-3d-canvas.is-grabbing{cursor:grabbing;touch-action:none}
+.hero-3d-canvas{position:absolute;inset:0;width:100%;height:100%;z-index:2;cursor:grab;touch-action:none;outline-offset:-5px}
+.hero-3d-canvas.is-grabbing{cursor:grabbing}
 [data-hero-3d-ready] .hero-sculpture{visibility:hidden}
 .home-shell .hero-scene-caption{display:flex;align-items:center;gap:16px;z-index:3;letter-spacing:.03em}
 .hero-scene-caption button{border:1px solid currentColor;border-radius:20px;padding:8px 14px;background:transparent;color:inherit;font:inherit;cursor:pointer;min-height:36px}
@@ -3701,4 +3701,6 @@ html[data-theme="light"] .editor-shell .panel-label{color:#525462!important}
 .editor-shell .field textarea{border-radius:5px!important}
 .editor-shell .task-brief.is-collapsed{display:none!important}
 .editor-shell .materials-drawer .material-library-head{display:none}
-.home-shell .hero-scene-caption{pointer-events:auto!important}
+
+
+ .hero-3d-canvas:focus{outline:none}.hero-3d-canvas:focus-visible{outline:2px solid rgba(177,149,255,.62);border-radius:8px}

@@ -1008,7 +1008,6 @@ function renderHome() {
           <span class="hero-orbit hero-orbit-a" aria-hidden="true"></span>
           <span class="hero-orbit hero-orbit-b" aria-hidden="true"></span>
           <img class="hero-sculpture" src="${HERO_SCULPTURE_SRC}" alt="" aria-hidden="true">
-          <div class="hero-scene-caption"><span>Вращайте, чтобы рассмотреть</span><button type="button" data-hero-motion aria-pressed="true">Пауза</button></div>
         </div>
       </section>
 
@@ -2544,3 +2543,5 @@ function showCheckModal(result:Evaluation,previewUrl:string,aiReview:AiReview|nu
 
 injectIconOverrides()
 render()
+
+

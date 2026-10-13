@@ -25,7 +25,7 @@ export function mountHeroScene(host: HTMLElement): () => void {
     const canvas=renderer.domElement
     canvas.className='hero-3d-canvas'; canvas.tabIndex=0
     canvas.setAttribute('role','img')
-    canvas.setAttribute('aria-label','Объёмная сборка: металлическая лента, стеклянное кольцо и керамические модули. Вращайте мышью, пальцем или клавишами стрелок.')
+    canvas.setAttribute('aria-label','Объёмная сборка: металлическая лента, стеклянное кольцо и керамические модули. Перетаскивайте мышью или пальцем: горизонтально для поворота, вертикально для наклона. Shift и Q/E задают крен. На сенсорном экране поверните двумя пальцами.')
     host.append(canvas)
     const scene=new THREE.Scene()
     const camera=new THREE.PerspectiveCamera(35,1,.1,60)
@@ -65,64 +65,71 @@ export function mountHeroScene(host: HTMLElement): () => void {
     const smoothRibbon=mergeVertices(rawRibbon); smoothRibbon.computeVertexNormals(); rawRibbon.dispose()
     const ribbon=mesh(smoothRibbon,blue,-1.18,.12,0)
     ribbon.rotation.z=.32
-    const ring=mesh(new THREE.TorusGeometry(.8,.13,24,100),glass,1.12,.12,.72)
-    ring.rotation.set(.28,.35,-.18)
-    const satellite=mesh(new THREE.TorusGeometry(.43,.09,20,72),chrome,-2.02,-1.48,1.05)
-    satellite.rotation.set(.7,-.2,.16)
-    mesh(new THREE.SphereGeometry(.38,48,32),cream,1.82,1.48,.48)
-    const block=mesh(new RoundedBoxGeometry(.54,.54,.54,5,.12),orange,1.72,-1.36,.42)
+    const ring=mesh(new THREE.TorusGeometry(.47,.1,24,100),glass,1.05,2.05,.72)
+    ring.rotation.set(.16,.28,-.12)
+    const satellite=mesh(new THREE.TorusGeometry(.36,.085,20,72),chrome,-1.84,-1.84,1.05)
+    satellite.rotation.set(.74,-.2,.16)
+    mesh(new THREE.SphereGeometry(.3,48,32),cream,2.05,1.12,.48)
+    const block=mesh(new RoundedBoxGeometry(.46,.46,.46,5,.1),orange,1.95,-1.58,.42)
     block.rotation.set(.2,.36,.24)
-    const bead=mesh(new THREE.SphereGeometry(.12,24,16),chrome,-.62,1.76,.62)
+    const bead=mesh(new THREE.SphereGeometry(.12,24,16),chrome,-1.18,.12,.15)
     bead.name='counterweight'
-    let dragging=false, pointer=-1, x=0,y=0, velocity=0,lastMove=0, visible=true, paused=false
+    let dragging=false, pointer=-1, x=0,y=0, velocity=0,lastMove=0, visible=true
+    const activePointers=new Map<number,{x:number;y:number}>()
+    let previousRoll:number|null=null
     let last=0
-    const reduced=matchMedia('(prefers-reduced-motion: reduce)')
-    paused=reduced.matches
-    const control=host.querySelector<HTMLButtonElement>('[data-hero-motion]')
-    const updateControl=()=>{if(control){control.textContent=paused?'Вращать':'Пауза';control.setAttribute('aria-pressed',String(!paused))}}
     const draw=()=>renderer?.render(scene,camera)
     const tick=(time:number)=>{
       const dt=Math.min((time-last)/1000,.04);last=time
       if(visible&&!document.hidden){
-        if(!dragging){assembly.rotation.y+=velocity*dt;velocity*=Math.exp(-dt*5);if(!paused)assembly.rotation.y+=dt*.17}
+        if(!dragging){assembly.rotation.y+=velocity*dt;velocity*=Math.exp(-dt*5);assembly.rotation.y+=dt*.17}
         draw()
       }
       frame=requestAnimationFrame(tick)
     }
     const opts={signal:events.signal}
     canvas.addEventListener('pointerdown',e=>{
-      if(dragging||e.button!==0)return
-      dragging=true;pointer=e.pointerId;x=e.clientX;y=e.clientY;velocity=0;lastMove=performance.now()
-      canvas.setPointerCapture(pointer);canvas.classList.add('is-grabbing')
+      if(e.button!==0)return
+      activePointers.set(e.pointerId,{x:e.clientX,y:e.clientY})
+      if(activePointers.size===1){dragging=true;pointer=e.pointerId;x=e.clientX;y=e.clientY;velocity=0;lastMove=performance.now();canvas.classList.add('is-grabbing')}
+      if(activePointers.size===2){const pts=[...activePointers.values()];previousRoll=Math.atan2(pts[1].y-pts[0].y,pts[1].x-pts[0].x)}
+      canvas.setPointerCapture(e.pointerId)
     },opts)
     canvas.addEventListener('pointermove',e=>{
+      if(!activePointers.has(e.pointerId))return
+      activePointers.set(e.pointerId,{x:e.clientX,y:e.clientY})
+      if(activePointers.size>=2){const pts=[...activePointers.values()];const angle=Math.atan2(pts[1].y-pts[0].y,pts[1].x-pts[0].x);if(previousRoll!==null)assembly.rotation.z+=THREE.MathUtils.euclideanModulo(angle-previousRoll+Math.PI,Math.PI*2)-Math.PI;previousRoll=angle;draw();return}
       if(!dragging||e.pointerId!==pointer)return
-      const now=performance.now(),dx=e.clientX-x
-      assembly.rotation.y+=dx*.008
-      assembly.rotation.x=THREE.MathUtils.clamp(assembly.rotation.x+(e.clientY-y)*.006,-1.1,1.1)
+      const now=performance.now(),dx=e.clientX-x,dy=e.clientY-y
+      if(e.shiftKey)assembly.rotation.z+=dx*.008
+      else{assembly.rotation.y+=dx*.008;assembly.rotation.x=THREE.MathUtils.clamp(assembly.rotation.x+dy*.006,-1.35,1.35)}
       velocity=THREE.MathUtils.clamp(dx*.008/Math.max(.008,(now-lastMove)/1000),-3,3)
       x=e.clientX;y=e.clientY;lastMove=now;draw()
     },opts)
-    const release=(e:PointerEvent)=>{if(e.pointerId!==pointer)return;dragging=false;pointer=-1;if(performance.now()-lastMove>100||reduced.matches)velocity=0;canvas.classList.remove('is-grabbing')}
+    const release=(e:PointerEvent)=>{activePointers.delete(e.pointerId);previousRoll=null;if(activePointers.size===0){dragging=false;pointer=-1;if(performance.now()-lastMove>100)velocity=0;canvas.classList.remove('is-grabbing')}else{const remaining=activePointers.entries().next().value as [number,{x:number;y:number}]|undefined;if(remaining){pointer=remaining[0];x=remaining[1].x;y=remaining[1].y;lastMove=performance.now()}}}
     canvas.addEventListener('pointerup',release,opts);canvas.addEventListener('pointercancel',release,opts);canvas.addEventListener('lostpointercapture',release,opts)
     canvas.addEventListener('keydown',e=>{
-      if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home'].includes(e.key))return
+      if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','q','Q','e','E'].includes(e.key))return
       e.preventDefault();velocity=0
       if(e.key==='Home')assembly.rotation.set(.12,-.3,-.12)
       else if(e.key==='ArrowLeft'||e.key==='ArrowRight')assembly.rotation.y+=e.key==='ArrowLeft'?-.15:.15
-      else assembly.rotation.x=THREE.MathUtils.clamp(assembly.rotation.x+(e.key==='ArrowUp'?-.15:.15),-1.1,1.1)
+      else if(e.key==='q'||e.key==='Q')assembly.rotation.z-=.15
+      else if(e.key==='e'||e.key==='E')assembly.rotation.z+=.15
+      else assembly.rotation.x=THREE.MathUtils.clamp(assembly.rotation.x+(e.key==='ArrowUp'?-.15:.15),-1.35,1.35)
       draw()
     },opts)
-    control?.addEventListener('click',()=>{paused=!paused;velocity=0;updateControl()},opts)
-    reduced.addEventListener('change',()=>{paused=reduced.matches;velocity=0;updateControl()},opts)
     const resize=()=>{const {width,height}=host.getBoundingClientRect();if(!width||!height)return
       renderer!.setSize(width,height,false);camera.aspect=width/height
-      camera.position.set(0,0,Math.max(8.4,8.1/camera.aspect));camera.lookAt(0,0,0);camera.updateProjectionMatrix();draw()}
+      camera.position.set(0,0,Math.max(11,10.5/camera.aspect));camera.lookAt(0,0,0);camera.updateProjectionMatrix();draw()}
     observer=new ResizeObserver(resize);observer.observe(host)
     visibility=new IntersectionObserver(entries=>{visible=entries[0].isIntersecting});visibility.observe(host)
     canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();dispose()},opts)
-    resize();updateControl();host.setAttribute('data-hero-3d-ready','true');frame=requestAnimationFrame(tick)
+    resize();host.setAttribute('data-hero-3d-ready','true');frame=requestAnimationFrame(tick)
     return dispose
   } catch(error) {dispose();console.warn('3D unavailable; showing static fallback.',error);return ()=>undefined}
 }
+
+
+
+
 
