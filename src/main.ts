@@ -991,7 +991,7 @@ function renderHome() {
       <section class="hero">
         <div class="hero-copy reveal">
           <div class="eyebrow"><span>01</span> ОБУЧЕНИЕ ЧЕРЕЗ ПРАКТИКУ</div>
-          <h1>Учись видеть.<br><em>Создавай.</em></h1>
+          <h1>Учись видеть.<br><em class="create-word" aria-label="Создавай."><span aria-hidden="true" style="--letter:0">С</span><span aria-hidden="true" style="--letter:1">о</span><span aria-hidden="true" style="--letter:2">з</span><span aria-hidden="true" style="--letter:3">д</span><span aria-hidden="true" style="--letter:4">а</span><span aria-hidden="true" style="--letter:5">в</span><span aria-hidden="true" style="--letter:6">а</span><span aria-hidden="true" style="--letter:7">й</span><span aria-hidden="true" style="--letter:8">.</span></em></h1>
           <p>Осваивай графический дизайн в интерактивном редакторе: собирай композиции, пробуй цвет и типографику, развивай собственный визуальный язык.</p>
           <div class="hero-actions">
             <button class="primary-button" data-action="start-first">НАЧАТЬ ОБУЧЕНИЕ ${uiIcon('forward')}</button>
@@ -1237,6 +1237,7 @@ function renderEditor() {
               <button data-action="redo" aria-label="Повторить" title="Повторить · Ctrl+Shift+Z" ${historyIndex >= history.length - 1 ? 'disabled' : ''}>↷</button>
             </div>
           </div>
+          <details class="shortcut-guide"><summary>Сочетания клавиш</summary><dl><dt>Ctrl / ⌘ Z</dt><dd>Отменить</dd><dt>Ctrl Shift Z / Ctrl Y</dt><dd>Повторить</dd><dt>Ctrl C / X / V</dt><dd>Копировать / вырезать / вставить слой</dd><dt>Ctrl D / J</dt><dd>Дублировать</dd><dt>Ctrl S / E</dt><dd>Сохранить / PNG</dd><dt>Ctrl [ / ]</dt><dd>Порядок слоёв · Shift: до края</dd><dt>V / H · Пробел</dt><dd>Выбор / рука · временная рука</dd><dt>T / R</dt><dd>Текст / форма</dd><dt>Стрелки · Shift</dt><dd>Сдвиг на 1 / 10 px</dd><dt>Ctrl + / − / 0 / 1</dt><dd>Масштаб / вписать / 100%</dd><dt>Shift при повороте</dt><dd>Шаг 15°</dd><dt>Shift при размере</dt><dd>Сохранить пропорции</dd></dl></details>
           <button class="reset-task-button" data-action="reset-task">Новый исходный макет</button>
         </aside>
 
@@ -1288,11 +1289,11 @@ function renderEditor() {
         </section>
 
         <aside class="right-panel panel">
-          <div class="panel-label">СВОЙСТВА</div>
+          <section class="inspector-dock"><div class="panel-label">СВОЙСТВА</div>
           <div data-properties-host="true">${object ? renderProperties(object) : renderEmptyProperties()}</div>
 
           <div class="panel-divider"></div>
-          <div class="panel-label layer-heading">СЛОИ <span class="layer-count">${String(objects.length).padStart(2, '0')}</span></div>
+          </section><section class="layers-dock"><div class="panel-label layer-heading">СЛОИ <span class="layer-count">${String(objects.length).padStart(2, '0')}</span></div>
           <div class="layers" data-layers role="listbox" aria-label="Слои макета">
             ${[...objects].reverse().map((item) => `
               <div class="layer-row ${item.id === selectedId ? 'selected' : ''}" data-layer-id="${escapeHtml(item.id)}" data-select="${escapeHtml(item.id)}" role="option" aria-selected="${item.id === selectedId}" tabindex="0">
@@ -1306,7 +1307,7 @@ function renderEditor() {
             `).join('')}
           </div>
 
-          <div class="ai-preview">
+          </section><div class="ai-preview">
             <div class="ai-head"><span>ОБРАТНАЯ СВЯЗЬ</span><span class="ai-spark">${uiIcon('sparkles')}</span></div>
             <p>Критерии и разбор появятся после проверки.</p>
           </div>
@@ -1347,7 +1348,7 @@ function renderHandles() {
     <span class="resize-handle se" data-resize="se"></span>
     <span class="resize-handle s" data-resize="s"></span>
     <span class="resize-handle sw" data-resize="sw"></span>
-    <span class="resize-handle w" data-resize="w"></span>
+    <span class="resize-handle w" data-resize="w"></span><span class="resize-handle rotate" data-resize="rotate" title="Поворот · Shift: шаг 15°"></span>
   `
 }
 
@@ -1435,7 +1436,8 @@ function bindResizeHandle(handle: HTMLElement) {
     const object = objects.find((item) => item.id === parent?.dataset.object)
     if (!object || !parent) return
     selectObject(object.id)
-    bindResize(event, object, handle.dataset.resize ?? 'se', parent)
+    if (handle.dataset.resize === 'rotate') bindRotation(event, object, parent)
+    else bindResize(event, object, handle.dataset.resize ?? 'se', parent)
     updatePropertyInputs()
   })
 }
@@ -1460,6 +1462,7 @@ document.fonts.ready.then(() => { if (screen === 'editor') fitTextBoxes() })
 
 function updateWorkspace() {
   const poster = app.querySelector<HTMLElement>('[data-poster]')
+  if (poster) poster.style.setProperty('--inverse-zoom', String(1 / (viewScale || 1)))
   if (poster) poster.style.setProperty('transform', 'translate(' + viewX + 'px,' + viewY + 'px) scale(' + viewScale + ')', 'important')
   const label = app.querySelector('[data-zoom-label]')
   if (label) label.textContent = Math.round(viewScale * 100) + '%'
@@ -1721,12 +1724,34 @@ function startPanMomentum(velocityX: number, velocityY: number) {
   panMomentumFrame = requestAnimationFrame(tick)
 }
 
+let objectClipboard: EditorObject | null = null
 document.addEventListener('keydown', event => {
   if (screen !== 'editor' || (event.target as HTMLElement).closest('input, textarea, select, [contenteditable]')) return
   if (event.code === 'Space') { event.preventDefault(); spaceHeld = true; updateWorkspace(); return }
-  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); event.shiftKey ? redo() : undo(); return }
-  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'd') { event.preventDefault(); duplicateSelected(); return }
-  if (event.key === 'Escape') { selectObject(null); return }
+  if ((event.ctrlKey || event.metaKey) && event.code === 'KeyZ') { event.preventDefault(); event.shiftKey ? redo() : undo(); return }
+  if ((event.ctrlKey || event.metaKey) && ['KeyD','KeyJ'].includes(event.code)) { event.preventDefault(); duplicateSelected(); return }
+  const command = event.ctrlKey || event.metaKey
+  if(command && event.code === 'KeyY') { event.preventDefault(); redo(); return }
+  if(command && ['KeyC','KeyX','KeyV'].includes(event.code)) {
+    event.preventDefault()
+    if(event.code === 'KeyV') {
+      if(objectClipboard) { const copy = {...objectClipboard,id:crypto.randomUUID(),x:objectClipboard.x+24,y:objectClipboard.y+24};objects.push(copy);selectedId=copy.id;objectClipboard={...copy};saveHistory();render() }
+    } else { const item=selectedObject();if(item) {objectClipboard={...item};if(event.code==='KeyX') deleteSelected()} }
+    return
+  }
+  if(command && event.code === 'KeyS') {event.preventDefault();saveDraft();notify('Макет сохранён');return}
+  if(command && event.code === 'KeyE') {event.preventDefault();void exportPoster();return}
+  if(command && ['Equal','Minus','Digit0','Digit1'].includes(event.code)) {event.preventDefault();if(event.code==='Digit0')fitWorkspace();else zoomWorkspace(event.code==='Digit1'?1/viewScale:event.code==='Equal'?1.2:1/1.2);return}
+  if(command && ['BracketLeft','BracketRight'].includes(event.code)) {
+    event.preventDefault();const index=objects.findIndex(item=>item.id===selectedId)
+    if(index>=0) {const target=event.shiftKey?(event.code==='BracketLeft'?0:objects.length-1):clamp(index+(event.code==='BracketLeft'?-1:1),0,objects.length-1);const [item]=objects.splice(index,1);objects.splice(target,0,item);saveHistory();render()}
+    return
+  }
+  if(!command && !event.altKey) {
+    if(event.code==='KeyV'||event.code==='KeyH') {event.preventDefault();handTool=event.code==='KeyH';updateWorkspace();return}
+    if(event.code==='KeyT'||event.code==='KeyR') {event.preventDefault();addObject(event.code==='KeyT'?'text':'shape');return}
+  }
+  if (event.key === 'Escape') { if(briefOpen)toggleTaskBrief();selectObject(null); return }
   if (event.key === 'Delete' || event.key === 'Backspace') { event.preventDefault(); deleteSelected(); return }
   const object = selectedObject()
   if (!object || !['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)) return
@@ -2185,6 +2210,26 @@ function bindDrag(event: PointerEvent, object: EditorObject, element: HTMLElemen
 }
 
 
+function bindRotation(event: PointerEvent, object: EditorObject, element: HTMLElement) {
+  const rect = element.getBoundingClientRect(), cx = rect.x + rect.width / 2, cy = rect.y + rect.height / 2
+  const initial = object.rotation ?? 0, start = Math.atan2(event.clientY-cy,event.clientX-cx)
+  const move = (e: PointerEvent) => {
+    if(e.pointerId !== event.pointerId) return
+    const angle = initial + (Math.atan2(e.clientY-cy,e.clientX-cx)-start)*180/Math.PI
+    object.rotation = e.shiftKey ? Math.round(angle/15)*15 : Math.round(angle)
+    element.style.transform = `rotate(${object.rotation}deg)`
+    updatePropertyInputs()
+  }
+  const up = (e: PointerEvent) => {
+    if(e.pointerId !== event.pointerId) return
+    window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);window.removeEventListener('pointercancel',up)
+    if(e.type === 'pointercancel') { object.rotation=initial; element.style.transform=`rotate(${initial}deg)` }
+    else saveHistory()
+    updatePropertyInputs()
+  }
+  window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up)
+}
+
 function bindResize(event: PointerEvent, object: EditorObject, direction: string, element: HTMLElement) {
   const captureTarget = event.currentTarget instanceof HTMLElement ? event.currentTarget : element
   try { captureTarget.setPointerCapture(event.pointerId) } catch {}
@@ -2194,10 +2239,10 @@ function bindResize(event: PointerEvent, object: EditorObject, direction: string
   let changed = false
 
   const move = (current: PointerEvent) => {
-    const poster = document.querySelector<HTMLElement>('[data-poster]')
-    const scale = poster ? poster.getBoundingClientRect().width / poster.clientWidth : 1
-    const dx = (current.clientX - startX) / scale
-    const dy = (current.clientY - startY) / scale
+    if(current.pointerId !== event.pointerId) return
+    const angle=(object.rotation??0)*Math.PI/180, cos=Math.cos(angle), sin=Math.sin(angle)
+    const screenX=(current.clientX-startX)/(viewScale||1),screenY=(current.clientY-startY)/(viewScale||1)
+    const dx=screenX*cos+screenY*sin,dy=-screenX*sin+screenY*cos
 
     let x = initial.x
     let y = initial.y
@@ -2227,6 +2272,16 @@ function bindResize(event: PointerEvent, object: EditorObject, direction: string
 
 
 
+    if(current.shiftKey && direction.length===2) {
+      const ratio=initial.width/initial.height
+      if(Math.abs(width-initial.width)>Math.abs(height-initial.height)*ratio)height=width/ratio
+      else width=height*ratio
+      if(direction.includes('w'))x=initial.x+initial.width-width
+      if(direction.includes('n'))y=initial.y+initial.height-height
+    }
+    const localCx=x+width/2-(initial.x+initial.width/2),localCy=y+height/2-(initial.y+initial.height/2)
+    x=initial.x+initial.width/2+localCx*cos-localCy*sin-width/2
+    y=initial.y+initial.height/2+localCx*sin+localCy*cos-height/2
     if (width >= minSize && height >= minSize) {
       object.x = x
       object.y = y

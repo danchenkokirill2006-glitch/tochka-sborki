@@ -57,22 +57,22 @@ export function mountHeroScene(host: HTMLElement): () => void {
     ribbonShape.quadraticCurveTo(-.46,0,-.42,-.055)
     const points=Array.from({length:97},(_,i)=>{
       const t=i/96*Math.PI*2
-      return new THREE.Vector3(1.02*Math.cos(t),1.25*Math.sin(t),-.55+.35*Math.sin(2*t))
+      return new THREE.Vector3(1.4*Math.cos(t),1.75*Math.sin(t),-.9+.35*Math.sin(2*t))
     })
     const path=new THREE.CatmullRomCurve3(points,true,'centripetal')
     const rawRibbon=new THREE.ExtrudeGeometry(ribbonShape,{steps:240,extrudePath:path,bevelEnabled:false})
     rawRibbon.deleteAttribute('normal'); rawRibbon.deleteAttribute('uv')
     const smoothRibbon=mergeVertices(rawRibbon); smoothRibbon.computeVertexNormals(); rawRibbon.dispose()
-    const ribbon=mesh(smoothRibbon,blue,-1.18,.12,0)
+    const ribbon=mesh(smoothRibbon,blue,-.15,.12,0)
     ribbon.rotation.z=.32
-    const ring=mesh(new THREE.TorusGeometry(.47,.1,24,100),glass,1.05,2.05,.72)
-    ring.rotation.set(.16,.28,-.12)
-    const satellite=mesh(new THREE.TorusGeometry(.36,.085,20,72),chrome,-1.84,-1.84,1.05)
+    const ring=mesh(new THREE.TorusGeometry(.88,.16,32,128),glass,.72,-.25,.85)
+    ring.rotation.set(.3,.42,-.32)
+    const satellite=mesh(new THREE.TorusGeometry(.62,.10,24,96),chrome,-.95,-1.35,1.95)
     satellite.rotation.set(.74,-.2,.16)
-    mesh(new THREE.SphereGeometry(.3,48,32),cream,2.05,1.12,.48)
-    const block=mesh(new RoundedBoxGeometry(.46,.46,.46,5,.1),orange,1.95,-1.58,.42)
+    mesh(new THREE.SphereGeometry(.5,48,32),cream,.7,1.5,.85)
+    const block=mesh(new RoundedBoxGeometry(.65,.65,.65,5,.1),orange,1.2,-1.22,1.75)
     block.rotation.set(.2,.36,.24)
-    const bead=mesh(new THREE.SphereGeometry(.12,24,16),chrome,-1.18,.12,.15)
+    const bead=mesh(new THREE.SphereGeometry(.16,24,16),chrome,-.8,.65,.35)
     bead.name='counterweight'
     let dragging=false, pointer=-1, x=0,y=0, velocity=0,lastMove=0, visible=true
     const activePointers=new Map<number,{x:number;y:number}>()
@@ -102,7 +102,7 @@ export function mountHeroScene(host: HTMLElement): () => void {
       if(!dragging||e.pointerId!==pointer)return
       const now=performance.now(),dx=e.clientX-x,dy=e.clientY-y
       if(e.shiftKey)assembly.rotation.z+=dx*.008
-      else{assembly.rotation.y+=dx*.008;assembly.rotation.x=THREE.MathUtils.clamp(assembly.rotation.x+dy*.006,-1.35,1.35)}
+      else{assembly.rotation.y+=dx*.008;assembly.rotation.x=assembly.rotation.x+dy*.006}
       velocity=THREE.MathUtils.clamp(dx*.008/Math.max(.008,(now-lastMove)/1000),-3,3)
       x=e.clientX;y=e.clientY;lastMove=now;draw()
     },opts)
@@ -120,7 +120,7 @@ export function mountHeroScene(host: HTMLElement): () => void {
     },opts)
     const resize=()=>{const {width,height}=host.getBoundingClientRect();if(!width||!height)return
       renderer!.setSize(width,height,false);camera.aspect=width/height
-      camera.position.set(0,0,Math.max(11,10.5/camera.aspect));camera.lookAt(0,0,0);camera.updateProjectionMatrix();draw()}
+      camera.position.set(0,0,Math.max(8.5,7.8/camera.aspect));camera.lookAt(0,0,0);camera.updateProjectionMatrix();draw()}
     observer=new ResizeObserver(resize);observer.observe(host)
     visibility=new IntersectionObserver(entries=>{visible=entries[0].isIntersecting});visibility.observe(host)
     canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();dispose()},opts)
@@ -128,6 +128,7 @@ export function mountHeroScene(host: HTMLElement): () => void {
     return dispose
   } catch(error) {dispose();console.warn('3D unavailable; showing static fallback.',error);return ()=>undefined}
 }
+
 
 
 
