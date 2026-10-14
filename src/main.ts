@@ -2455,8 +2455,8 @@ async function checkWork() {
 function showCheckModal(result:Evaluation,previewUrl:string,aiReview:AiReview|null,aiState:AiReviewState) {
   const overlay=document.createElement('div')
   overlay.className='modal-overlay result-overlay'
-  const recommendations=aiReview?.recommendations?.length?aiReview.recommendations:result.recommendations
-  const strengths=aiReview?.strengths?.length?aiReview.strengths:result.strengths
+  const recommendations=aiReview?aiReview.recommendations:result.recommendations
+  const strengths=aiReview?aiReview.strengths:result.strengths
   const aiLabel=aiState==='ready'?'ИИ-РАЗБОР ГОТОВ':aiState==='not-configured'?'ИИ НЕ ПОДКЛЮЧЁН':aiState==='source'?'ИИ-РАЗБОР ПОСЛЕ ПРАВОК':'ПРОВЕРКА ПО КРИТЕРИЯМ'
   const aiNote=aiState==='not-configured'?'Доступна самостоятельная проверка по условиям задания. Развёрнутый ИИ-разбор пока не подключён.':aiState==='unavailable'?'ИИ-разбор временно недоступен. Проверка условий задания работает независимо от него.':aiState==='local'?'В локальном предпросмотре доступна проверка по учебным критериям.':aiState==='source'?'ИИ-разбор появится после самостоятельной переработки макета. Исходная версия не оценивается.':'Проверка по учебным критериям дополняет визуальный разбор.'
   overlay.innerHTML=`<section class="result-modal" aria-label="Результат работы">
