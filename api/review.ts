@@ -84,6 +84,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         httpStatus: response.status,
         errors: payload.errors?.map(({ code, message }) => ({ code, message })),
         hasResult: Boolean(payload.result),
+        resultFields: payload.result && typeof payload.result === 'object' ? Object.keys(payload.result) : [],
       })
       return res.status(502).json({ error: 'empty_review' })
     }
