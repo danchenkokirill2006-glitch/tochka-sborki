@@ -77,6 +77,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       success?: boolean
       result?: unknown
       errors?: Array<{ code?: number; message?: string }>
+      messages?: unknown[]
     }
     const result = payload.result && typeof payload.result === 'object' && !Array.isArray(payload.result)
       ? payload.result as Record<string, unknown>
@@ -85,6 +86,8 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     if (payload.success === false || !answer) {
       console.error('[workers-ai] empty or failed response', {
         httpStatus: response.status,
+        providerSuccess: payload.success,
+        providerMessages: payload.messages,
         errors: payload.errors?.map(({ code, message }) => ({ code, message })),
         hasResult: Boolean(payload.result),
         resultType: typeof payload.result,
