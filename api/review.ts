@@ -56,6 +56,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   recentCalls.set(ip, recent)
 
   const question = [
+    'CRITICAL OUTPUT LANGUAGE: Write every field in Russian using Cyrillic. Do not answer in English.',
     'Ты — преподаватель графического дизайна. Рассмотри прикреплённое изображение как макет ученика и оцени его по заданию. Отвечай по-русски.',
     'Сначала найди реальные детали изображения: конкретный текст или объект, его размер, цвет и положение относительно других элементов. Затем дай 1–2 сильные стороны и ровно 3 улучшения.',
     'Каждое улучшение должно называть конкретный видимый элемент и объяснять, что с ним сделать в редакторе и зачем. Не пиши общие пункты вроде «улучшить композицию», «повысить читаемость» или «добавить контраст» без указания элемента и действия.',
@@ -125,7 +126,8 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     const looksLikeTemplate = [summary, ...strengths, ...recommendations].some(value =>
       /краткий вывод|сильная сторона|факт\s*[—-]\s*почему важно|конкретное действие|название поля|улучшить композицию|повысить читаемость|добавить контраст|улучшение читаемости|улучшение иерархии|улучшение композиции|^видимый макет$|^иерархия$|^композиция$/i.test(value),
     )
-    if (looksLikeTemplate || strengths.length === 0 || strengths.some(value => value.length < 20) || recommendations.length < 3 || recommendations.slice(0, 3).some(value => value.length < 45)) {
+    const hasRussianCopy = [summary, ...strengths, ...recommendations.slice(0, 3)].every(value => /[А-Яа-яЁё]/.test(value))
+    if (looksLikeTemplate || !hasRussianCopy || strengths.length === 0 || strengths.some(value => value.length < 20) || recommendations.length < 3 || recommendations.slice(0, 3).some(value => value.length < 45)) {
       return res.status(502).json({ error: 'invalid_review' })
     }
     return res.status(200).json({
