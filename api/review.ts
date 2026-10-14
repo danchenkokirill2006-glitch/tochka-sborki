@@ -91,7 +91,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${model}`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${apiToken}`, 'Content-Type': 'application/json' },
-      signal: AbortSignal.timeout(28_000),
+      signal: AbortSignal.timeout(55_000),
       body: JSON.stringify({ image: imageBytes, prompt: question, max_tokens: 500, temperature: 0.2 }),
     })
     if (!response.ok) {
