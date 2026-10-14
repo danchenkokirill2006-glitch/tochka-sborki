@@ -1,8 +1,9 @@
+import { makeBaseObjects, makeReferenceObjects } from './task-layouts'
 import './style.css'
 let disposeHero: (() => void) | undefined
 let heroGeneration = 0
 import { toBlob } from 'html-to-image'
-import { evaluateProject, projects, starterFor, type Evaluation } from './assignments'
+import { evaluateProject, projects, starterFor, exerciseSpecs, ASSIGNMENT_VERSION, type Evaluation } from './assignments'
 import { allTaskMaterialSources, materialFor, taskMaterials, type TaskMaterial } from './task-assets'
 
 const LOGO_SIGN_SRC = new URL('./assets/logo-sign-color.png', import.meta.url).href
@@ -223,6 +224,7 @@ type UserAccount = {
   profile: ProfileData
   scores: Record<string, number>
   scoreVersion?: number
+  previousScores?: Record<string, number>
   theme: 'dark' | 'light'
   subscriptionActive: boolean
 }
@@ -279,8 +281,9 @@ function createUser(seed?: Partial<UserAccount>): UserAccount {
     id: typeof seed?.id === 'string' && /^[\w-]{1,80}$/.test(seed.id) ? seed.id : makeUserId(),
     createdAt: seed?.createdAt || new Date().toISOString(),
     profile: nextProfile,
-    scores: seed?.scoreVersion === 3 ? cleanScores(seed.scores) : cleanScores({}),
-    scoreVersion: 3,
+    scores: seed?.scoreVersion === ASSIGNMENT_VERSION ? cleanScores(seed.scores) : cleanScores({}),
+    previousScores: seed?.scoreVersion === ASSIGNMENT_VERSION ? cleanScores(seed.previousScores) : cleanScores(seed?.scores),
+    scoreVersion: ASSIGNMENT_VERSION,
     theme: seed?.theme === 'light' ? 'light' : 'dark',
     subscriptionActive: Boolean(seed?.subscriptionActive),
   }
@@ -293,7 +296,7 @@ function persistUsers() {
 }
 
 function activateUser(account: UserAccount) {
-  if (account.scoreVersion !== 3) { account.scores = {}; account.scoreVersion = 3 }
+  if (account.scoreVersion !== ASSIGNMENT_VERSION) { account.previousScores = {...account.scores}; account.scores = {}; account.scoreVersion = ASSIGNMENT_VERSION }
   currentUserId = account.id
   users[currentUserId] = account
   profile = { ...account.profile }
@@ -315,7 +318,8 @@ function loadUserBase() {
           createdAt: typeof value.createdAt === 'string' ? value.createdAt : undefined,
           profile: cleanProfile(value.profile),
           scores: cleanScores(value.scores),
-          scoreVersion: value.scoreVersion === 3 ? 3 : undefined,
+          scoreVersion: typeof value.scoreVersion === 'number' ? value.scoreVersion : undefined,
+          previousScores: cleanScores(value.previousScores),
           theme: value.theme === 'light' ? 'light' : 'dark',
           subscriptionActive: Boolean(value.subscriptionActive),
         })
@@ -385,140 +389,7 @@ const TASK_BACKGROUNDS: Record<string, string> = {
   composition:'#f0ede6', hierarchy:'#f2efe9', balance:'#141720', rhythm:'#efe9dd', color:'#f4f1e8', grid:'#f4f3ef',
 }
 
-function textLayer(id:string,name:string,text:string,x:number,y:number,width:number,height:number,fontSize:number,color:string,fontWeight=650,extra:Partial<EditorObject>={}): EditorObject {
-  return {id,type:'text',name,text,x,y,width,height,fontSize,fontWeight,color,fontFamily:'Manrope',lineHeight:1,letterSpacing:0,textAlign:'left',rotation:0,...extra}
-}
-
-function materialLayer(taskId:string,assetId:string,id:string,name:string,x:number,y:number,width?:number,height?:number,extra:Partial<EditorObject>={}): EditorObject {
-  const item=materialFor(taskId,assetId)
-  if(!item) throw new Error(`Missing task material: ${taskId}/${assetId}`)
-  return {id,type:'photo',name,x,y,width:width??item.width,height:height??item.height,rotation:0,opacity:1,background:'#f2f0e9',radius:item.radius??0,imageSrc:item.src,fit:item.fit,assetId:item.id,materialKind:item.kind,...extra}
-}
-
-const makeBaseObjects = (): EditorObject[] => {
-  switch (selectedTask.id) {
-    case 'composition': return [
-      materialLayer('composition','exhibition-photo','c-photo','Архитектура выставки',48,270,564,385,{fit:'cover'}),
-      materialLayer('composition','stone-arch','c-arch','Арка из травертина',310,358,248,230),
-      materialLayer('composition','prism-glass','c-prism','Стеклянная призма',54,424,188,142),
-      materialLayer('composition','metal-ribbon','c-metal','Металлическая лента',383,550,190,115),
-      textLayer('c-title','Название выставки','ГОРОД ФОРМ',48,73,555,105,67,'#20201e',850,{letterSpacing:-3}),
-      textLayer('c-sub','Формат выставки','Выставка современной графики',52,184,510,42,20,'#35332f',600),
-      textLayer('c-date','Даты','18–30 октября',50,690,265,40,25,'#242320',800),
-      textLayer('c-place','Площадка','Галерея «Контур»',50,746,310,30,19,'#242320',700),
-      textLayer('c-address','Адрес','пр. Ленина, 42',50,782,270,25,15,'#5d5952',550),
-      materialLayer('composition','contour-logo','c-logo','Логотип галереи',370,838,232,55),
-      textLayer('c-free','Вход','Вход свободный',50,840,230,28,16,'#35332f',700),
-    ]
-    case 'hierarchy': return [
-      materialLayer('hierarchy','designer-photo','h-photo','Портрет арт-директора',326,222,286,377,{fit:'cover'}),
-      materialLayer('hierarchy','portrait-woman','h-portrait','Портрет · вариант',383,448,171,184),
-      materialLayer('hierarchy','type-specimen','h-specimen','Типографический образец',56,569,180,130),
-      textLayer('h-kicker','Серия','FORMA STUDIO  /  OPEN CLASS',50,48,550,22,11,'#655f58',700,{letterSpacing:1.5}),
-      textLayer('h-title','Тема мастер-класса','ТИПОГРАФИКА\nБЕЗ ХАОСА',46,91,565,120,51,'#171719',850,{lineHeight:.9,letterSpacing:-2}),
-      textLayer('h-sub','Формат','Практический мастер-класс',50,219,282,60,18,'#514b47',700),
-      textLayer('h-name','Спикер','Анна Власова',50,346,270,48,28,'#171719',800),
-      textLayer('h-role','Должность','арт-директор Forma Studio',52,392,276,47,15,'#514b47',600),
-      textLayer('h-date','Дата','24 октября',50,743,230,32,20,'#171719',800),
-      textLayer('h-time','Время','19:00',50,777,120,28,16,'#514b47',650),
-      textLayer('h-venue','Место','Точка кипения\nпр. Социалистический, 68',50,822,320,55,14,'#33302e',650),
-      materialLayer('hierarchy','forma-logo','h-logo','Логотип Forma Studio',397,831,210,50),
-      textLayer('h-free','Участие','Регистрация бесплатная',392,780,220,28,13,'#655f58',650),
-    ]
-    case 'balance': return [
-      materialLayer('balance','night-stage','b-photo','Ночная сцена',55,140,386,470,{fit:'cover'}),
-      materialLayer('balance','smoke','b-smoke','Сценический дым',298,190,300,190),
-      materialLayer('balance','foil','b-chrome','Хромированная фольга',335,400,251,160),
-      materialLayer('balance','spotlight','b-light','Прожектор',421,93,170,170),
-      materialLayer('balance','audio-cable','b-cable','Аудиокабель',69,544,254,145),
-      textLayer('b-kicker','Жанр','ELECTRONIC  /  HOUSE  /  AMBIENT',54,49,555,23,11,'#c5c1cc',700,{letterSpacing:1.2}),
-      textLayer('b-title','Название концерта','НОЧЬ\nМУЗЫКИ',54,75,460,118,58,'#f7f1ea',850,{lineHeight:.86,letterSpacing:-2}),
-      textLayer('b-djs','Артисты','RADIUS / NEON /\nKOSMO / AURA',350,602,255,62,17,'#f2ede7',800,{lineHeight:1.15}),
-      textLayer('b-date','Дата и время','31 октября  /  22:00',55,740,320,30,18,'#f5d394',800),
-      textLayer('b-venue','Площадка','Сцена 12',55,780,235,30,20,'#f6f1eb',700),
-      materialLayer('balance','scene-logo','b-logo','Логотип Сцены 12',390,829,220,52),
-    ]
-    case 'rhythm': return [
-      materialLayer('rhythm','city-festival-photo','r-photo','Фестиваль в парке',42,198,576,342,{fit:'cover'}),
-      materialLayer('rhythm','rhythm-ribbon','r-ribbon','Лента фестиваля',205,325,344,146),
-      materialLayer('rhythm','rhythm-arrow','r-arrow','Стрелка',44,550,190,96),
-      materialLayer('rhythm','rhythm-steps','r-steps','Ритмические ступени',470,555,132,106),
-      materialLayer('rhythm','rhythm-sun','r-sun','Солнечный знак',517,125,88,88),
-      materialLayer('rhythm','rhythm-logo','r-logo','Знак фестиваля',431,51,190,48),
-      textLayer('r-title','Название фестиваля','РИТМ\nГОРОДА',43,58,380,120,57,'#202a22',850,{lineHeight:.88,letterSpacing:-2}),
-      textLayer('r-date','Даты фестиваля','12–13 июля',47,680,260,38,25,'#202a22',800),
-      textLayer('r-place','Площадка','Парк Центральный',49,722,300,28,17,'#353c32',650),
-      textLayer('r-program','Программа','Музыка  /  Дизайн\nМаркет  /  Стрит-арт',49,770,350,62,18,'#353c32',650,{lineHeight:1.3}),
-      textLayer('r-edition','Идентификатор','01 — 04   /   ГОРОД В ДВИЖЕНИИ',426,854,200,20,9,'#787263',650,{letterSpacing:1}),
-    ]
-    case 'color': return [
-      materialLayer('color','market-photo','m-photo','Натюрморт маркета',46,242,568,360,{fit:'cover'}),
-      materialLayer('color','basil-pot','m-basil','Базилик',55,405,181,195),
-      materialLayer('color','marigold-flower','m-flower','Бархатцы',445,300,162,200),
-      materialLayer('color','lemons','m-lemons','Лимоны',271,507,191,150),
-      materialLayer('color','ceramic-jar','m-ceramic','Керамика',460,586,145,176),
-      textLayer('m-kicker','Формат','ЛОКАЛЬНОЕ · СЕЗОННОЕ · ЖИВОЕ',48,48,555,22,10,'#52604c',750,{letterSpacing:1.4}),
-      textLayer('m-title','Название маркета','ЛЕТНИЙ\nМАРКЕТ',45,79,445,130,58,'#263d2b',850,{lineHeight:.9,letterSpacing:-2}),
-      materialLayer('color','summer-logo','m-logo','Логотип Лето Market',414,142,190,48),
-      textLayer('m-dates','Даты и часы','20–21 июля  ·  11:00–20:00',49,650,430,34,21,'#263d2b',800),
-      textLayer('m-program','Категории','Локальные бренды  /  Еда\nРастения  /  Музыка',50,700,390,58,15,'#374234',650,{lineHeight:1.35}),
-      textLayer('m-place','Место','Парк «Изумрудный»',50,833,340,30,18,'#263d2b',700),
-    ]
-    default: return [
-      materialLayer('grid','design-conference-photo','g-photo','Зал конференции',44,130,565,286,{fit:'cover'}),
-      materialLayer('grid','speaker-woman','g-speaker-a','Спикер · портрет 01',393,314,145,178),
-      materialLayer('grid','speaker-man','g-speaker-b','Спикер · портрет 02',483,364,131,160),
-      materialLayer('grid','metal-sculpture','g-sculpture','Металлический объект',50,433,145,173),
-      materialLayer('grid','design-day-logo','g-logo','Знак Design Day',423,51,192,48),
-      textLayer('g-kicker','Город','БАРНАУЛ  /  25 АПРЕЛЯ',48,51,340,23,11,'#4c5360',750,{letterSpacing:1.2}),
-      textLayer('g-title','Название конференции','DESIGN DAY\n2027',44,72,440,105,44,'#14213d',850,{lineHeight:.9,letterSpacing:-2}),
-      textLayer('g-intro','Описание','Конференция о дизайне, технологиях\nи визуальной культуре',48,429,352,48,14,'#2c3340',600,{lineHeight:1.25}),
-      textLayer('g-schedule-title','Заголовок расписания','ПРОГРАММА',48,500,200,26,12,'#14213d',850,{letterSpacing:1}),
-      textLayer('g-schedule-a','Расписание · 11:00','11:00 · Digital product design',48,543,340,27,13,'#222b3e',700),
-      textLayer('g-schedule-b','Расписание · 13:00','13:00 · New visual culture',48,581,340,27,13,'#222b3e',700),
-      textLayer('g-schedule-c','Расписание · 15:00','15:00 · AI and design',48,619,340,27,13,'#222b3e',700),
-      textLayer('g-schedule-d','Расписание · 17:00','17:00 · Карьера дизайнера',48,657,340,27,13,'#222b3e',700),
-      textLayer('g-venue','Место','Молодёжный центр',49,742,260,29,17,'#14213d',750),
-      textLayer('g-site','Сайт конференции','design-day.ru',49,779,210,25,13,'#495366',650),
-      materialLayer('grid','camera-detail','g-camera','Камера репортажа',403,699,177,122),
-    ]
-  }
-}
-
-const makeInitialObjects = (): EditorObject[] => {
-  const removed = new Set(['c-arch','c-prism','c-metal','h-portrait','h-specimen','b-smoke','b-chrome','b-light','b-cable','r-ribbon','r-steps','r-sun','m-basil','m-flower','m-lemons','m-ceramic','g-speaker-a','g-speaker-b','g-sculpture','g-camera'])
-  const result = makeBaseObjects().filter(item => !removed.has(item.id))
-  const layouts: Record<string,Partial<EditorObject>> = {
-    'c-title':{text:'ГОРОД\nФОРМ',x:44,y:72,width:570,height:178,fontSize:88,lineHeight:.92,letterSpacing:-4},
-    'c-sub':{x:48,y:267,fontSize:18,width:550,height:28},'c-photo':{x:48,y:327,width:564,height:340},
-    'c-date':{y:709,fontSize:28},'c-place':{y:766},'c-address':{y:801},'c-logo':{x:428,y:842,width:184,height:44},'c-free':{y:849},
-    'h-title':{x:46,y:95,fontSize:50,lineHeight:1,width:570,height:112},'h-photo':{x:330,y:307,width:282,height:370},
-    'h-sub':{x:49,y:230,width:550,height:32,fontSize:17},'h-name':{x:48,y:370,width:260,height:74,text:'Анна\nВласова',fontSize:33,lineHeight:1.05},
-    'h-role':{x:48,y:461,width:238,height:55,text:'арт-директор\nForma Studio',fontSize:16,lineHeight:1.3},'h-kicker':{fontSize:12,letterSpacing:.8},
-    'b-title':{x:46,y:111,width:566,height:159,fontSize:76,lineHeight:.94},'b-photo':{x:48,y:324,width:348,height:357},
-    'b-djs':{x:431,y:382,width:179,height:140,text:'RADIUS /\nNEON /\nKOSMO /\nAURA',fontSize:20,lineHeight:1.5},'b-kicker':{fontSize:12,letterSpacing:.7},'b-logo':{width:184,x:427},
-    'r-photo':{x:48,y:346,width:564,height:251},'r-title':{x:44,y:111,width:570,height:153,fontSize:73,lineHeight:.94},
-    'r-logo':{x:427,y:48,width:184,height:44},'r-arrow':{x:48,y:616,width:104,height:52},'r-date':{x:48,y:713},'r-place':{x:48,y:760},
-    'r-program':{x:343,y:713,width:266,height:80,fontSize:17,lineHeight:1.5},'r-edition':{x:48,y:855,width:560,fontSize:12,letterSpacing:.5},
-    'm-title':{x:44,y:101,width:550,height:132,fontSize:67,lineHeight:.94},'m-kicker':{fontSize:12,letterSpacing:.7},
-    'm-photo':{x:48,y:295,width:564,height:336},'m-logo':{x:428,y:839,width:184,height:46},'m-dates':{x:48,y:689,width:564,fontSize:23},
-    'm-program':{x:48,y:748,width:500,height:62,fontSize:17,lineHeight:1.45},'m-place':{x:48,y:851,width:355,fontSize:17},
-    'g-title':{x:46,y:112,width:568,height:143,fontSize:67,lineHeight:.94},'g-photo':{x:48,y:291,width:564,height:199},
-    'g-intro':{x:48,y:520,width:550,height:48,fontSize:16,lineHeight:1.3},'g-schedule-title':{y:596,fontSize:12},
-    'g-schedule-a':{x:48,y:638,width:564,fontSize:17},'g-schedule-b':{x:48,y:677,width:564,fontSize:17},
-    'g-schedule-c':{x:48,y:716,width:564,fontSize:17},'g-schedule-d':{x:48,y:755,width:564,fontSize:17},
-    'g-venue':{x:48,y:839,width:340,fontSize:17},'g-site':{x:425,y:840,width:187,fontSize:14},'g-logo':{x:428,y:46,width:184,height:44},'g-kicker':{fontSize:12,letterSpacing:.6},
-  }
-  result.forEach(item=>Object.assign(item,layouts[item.id]??{}))
-  const rule=(id:string,x:number,y:number,width:number,height:number,color:string):EditorObject=>({id,type:'shape',name:height<=5?'Линия разделения':'Ритмический модуль',x,y,width,height,rotation:0,background:color,radius:0})
-  const rules:Record<string,EditorObject[]>={
-    composition:[rule('c-rule',48,693,564,2,'#20201e')],hierarchy:[rule('h-rule',48,705,564,2,'#171719')],
-    balance:[rule('b-accent',432,330,176,5,'#f5d394')],color:[rule('m-rule',48,657,564,3,'#263d2b')],
-    grid:[rule('g-rule',48,812,564,2,'#14213d')],
-    rhythm:Array.from({length:6},(_,i)=>rule('r-beat-'+i,48+i*96,290,68,i===4?34:14,i===4?'#e1623b':'#202a22')),
-  }
-  return [...(rules[selectedTask.id]??[]),...result]
-}
+const makeInitialObjects = () => makeReferenceObjects(selectedTask.id)
 let posterBackground = '#f2f0e9'
 let objects: EditorObject[] = starterFor(selectedTask.id, makeInitialObjects())
 
@@ -575,8 +446,9 @@ function updateDraftStatus() {
   status.dataset.state = draftSaveStatus
 }
 
-function draftKey(taskId = selectedTask.id) { return `${DRAFT_PREFIX}${currentUserId}:${taskId}` }
-function briefDismissedKey(taskId = selectedTask.id) { return `${BRIEF_DISMISSED_PREFIX}${currentUserId}:${taskId}` }
+function legacyDraftKey(taskId = selectedTask.id) { return `${DRAFT_PREFIX}${currentUserId}:${taskId}` }
+function draftKey(taskId = selectedTask.id) { return `${legacyDraftKey(taskId)}:v${ASSIGNMENT_VERSION}` }
+function briefDismissedKey(taskId = selectedTask.id) { return `${BRIEF_DISMISSED_PREFIX}${currentUserId}:${taskId}:v${ASSIGNMENT_VERSION}` }
 
 function hasDraft(taskId: string) {
   return Boolean(safeStorageGet(draftKey(taskId)))
@@ -584,7 +456,7 @@ function hasDraft(taskId: string) {
 
 function saveDraft() {
   window.clearTimeout(draftSaveTimer)
-  const saved = safeStorageSet(draftKey(), JSON.stringify({version:2, objects, background:posterBackground, updatedAt:Date.now()}))
+  const saved = safeStorageSet(draftKey(), JSON.stringify({version:2, assignmentVersion:ASSIGNMENT_VERSION, objects, background:posterBackground, updatedAt:Date.now()}))
   draftSaveStatus = saved ? 'saved' : 'error'
   updateDraftStatus()
   if (!saved && !storageErrorNotified) {
@@ -600,13 +472,16 @@ function scheduleDraftSave() {
   draftSaveTimer = window.setTimeout(saveDraft, 250)
 }
 
-function loadDraft() {
+function loadDraft(legacy = false) {
   try {
-    const raw = safeStorageGet(draftKey())
+    const raw = safeStorageGet(legacy ? legacyDraftKey() : draftKey())
     if (!raw) return false
     const saved: unknown = JSON.parse(raw)
     if (!isRecord(saved) || saved.version !== 2 || !Array.isArray(saved.objects)) return false
-    objects = saved.objects.map(normalizeEditorObject).filter((item): item is EditorObject => item !== null)
+    objects = saved.objects.map((value,index) => {
+      if(isRecord(value)&&typeof value.assetId==='string'&&!safeImageData(value.imageSrc,3_500_000)) { const asset=materialFor(selectedTask.id,value.assetId);if(asset)value={...value,imageSrc:asset.src} }
+      return normalizeEditorObject(value,index)
+    }).filter((item): item is EditorObject => item !== null)
     const legacyPhoto=taskMaterials[selectedTask.id]?.find(item=>item.kind==='photo')
     if(legacyPhoto){
       for(const item of objects){
@@ -1066,7 +941,7 @@ function renderTasks() {
   return `<main class="shell inner-shell">${renderPageHeader('03', 'Собирай на практике.', 'Выбирайте задачу, продолжайте начатое и сравнивайте свои результаты.', 'tasks')}
     <section class="task-list-page">
       <div class="task-filter-row"><div class="filter-pills" role="group" aria-label="Фильтр заданий"><button class="active" data-filter="all" aria-pressed="true">Все</button><button data-filter="Базовый" aria-pressed="false">Базовый</button><button data-filter="Средний" aria-pressed="false">Средний</button><button data-filter="Продвинутый" aria-pressed="false">Продвинутый</button></div><span class="list-counter" aria-live="polite">${tasks.length} МОДУЛЕЙ</span></div>
-      <div class="task-list">${tasks.map(task => `<article class="task-row-card reveal" data-level="${task.level}"><div class="task-row-icon accent-${task.accent}">${uiIcon(task.icon as keyof typeof UI_ICON_SVGS)}</div><div class="task-row-main"><div class="task-row-number">${task.number}</div><div><h2>${projects[task.id].headline}</h2><p>${task.title} · ${projects[task.id].focus}</p><div class="task-meta"><span>${task.level}</span><span>${task.time}</span></div></div></div><div class="task-result"><span>РЕЗУЛЬТАТ</span><strong>${task.score || '—'}</strong></div><button class="task-row-action" data-task="${task.id}">${task.score || hasDraft(task.id) ? 'ПРОДОЛЖИТЬ' : 'НАЧАТЬ'} ${uiIcon('forward')}</button></article>`).join('')}</div>
+      <div class="curriculum-note"><strong>Практикум обновлён · 6 самостоятельных проектов</strong><p>В каждом исходнике есть учебная проблема. Зачёт: все обязательные сведения, читаемость, приём задания и переработка минимум трёх элементов. Старые макеты доступны в редакторе через «Открыть прежнюю работу».</p>${Object.values(users[currentUserId]?.previousScores??{}).some(value=>value>0)?`<details><summary>Результаты прежней версии — требуется повторная проверка</summary><ul>${tasks.filter(task=>(users[currentUserId]?.previousScores?.[task.id]??0)>0).map(task=>`<li>${task.title}: ${users[currentUserId].previousScores![task.id]} / 100</li>`).join('')}</ul></details>`:''}</div><div class="task-list">${tasks.map(task => `<article class="task-row-card reveal" data-level="${task.level}"><div class="task-row-icon accent-${task.accent}">${uiIcon(task.icon as keyof typeof UI_ICON_SVGS)}</div><div class="task-row-main"><div class="task-row-number">${task.number}</div><div><h2>${projects[task.id].headline}</h2><p>${task.title} · ${projects[task.id].focus}</p><div class="task-meta"><span>${task.level}</span><span>${task.time}</span></div></div></div><div class="task-result"><span>РЕЗУЛЬТАТ</span><strong>${task.score || '—'}</strong></div><button class="task-row-action" data-task="${task.id}">${task.score || hasDraft(task.id) ? 'ПРОДОЛЖИТЬ' : 'НАЧАТЬ'} ${uiIcon('forward')}</button></article>`).join('')}</div>
     </section>
   </main>`
 }
@@ -1238,6 +1113,7 @@ function renderEditor() {
             </div>
           </div>
           <details class="shortcut-guide"><summary>Сочетания клавиш</summary><dl><dt>Ctrl / ⌘ Z</dt><dd>Отменить</dd><dt>Ctrl Shift Z / Ctrl Y</dt><dd>Повторить</dd><dt>Ctrl C / X / V</dt><dd>Копировать / вырезать / вставить слой</dd><dt>Ctrl D / J</dt><dd>Дублировать</dd><dt>Ctrl S / E</dt><dd>Сохранить / PNG</dd><dt>Ctrl [ / ]</dt><dd>Порядок слоёв · Shift: до края</dd><dt>V / H · Пробел</dt><dd>Выбор / рука · временная рука</dd><dt>T / R</dt><dd>Текст / форма</dd><dt>Стрелки · Shift</dt><dd>Сдвиг на 1 / 10 px</dd><dt>Ctrl + / − / 0 / 1</dt><dd>Масштаб / вписать / 100%</dd><dt>Shift при повороте</dt><dd>Шаг 15°</dd><dt>Shift при размере</dt><dd>Сохранить пропорции</dd></dl></details>
+          ${safeStorageGet(legacyDraftKey()) ? '<button class="reset-task-button" data-action="restore-legacy">Открыть прежнюю работу</button>' : ''}
           <button class="reset-task-button" data-action="reset-task">Новый исходный макет</button>
         </aside>
 
@@ -1273,6 +1149,7 @@ function renderEditor() {
               <div><span>Обязательный текст</span><b>${project.requiredCopy.map(escapeHtml).join(' · ')}</b></div>
               <div><span>Ограничения</span><b>${project.constraints.map(escapeHtml).join(' · ')}</b></div>
             </div>
+            <section class="exercise-challenge"><h3>Ваша задача</h3><p>${escapeHtml(exerciseSpecs[selectedTask.id].problem)}</p><h3>Условия зачёта</h3><ul>${exerciseSpecs[selectedTask.id].acceptance.map(item=>`<li>${escapeHtml(item)}</li>`).join('')}</ul><details><summary>Два возможных направления</summary><ul>${exerciseSpecs[selectedTask.id].directions.map(item=>`<li>${escapeHtml(item)}</li>`).join('')}</ul></details></section>
             <details class="brief-guidance"><summary>Что сделать самостоятельно</summary><ol>${project.guidance.map(step => `<li>${escapeHtml(step)}</li>`).join('')}</ol><p>Автопроверка оценивает формальные признаки. Художественный выбор остаётся за вами; удачных решений может быть несколько.</p></details>
           </aside>
 
@@ -1805,6 +1682,7 @@ function bindEvents() {
       if (action === 'zoom-out') zoomWorkspace(1 / 1.2)
       if (action === 'hand') { handTool = !handTool; updateWorkspace() }
       if (action === 'toggle-brief') toggleTaskBrief()
+      if (action === 'restore-legacy') { if(loadDraft(true)){selectedId=null;saveHistory();render();notify('Открыта копия прежней работы. Для зачёта действуют новые критерии')} }
       if (action === 'reset-task') {
         if (!window.confirm('Открыть обновлённый исходный макет? Замену можно отменить кнопкой «Отменить», пока редактор открыт.')) return
         posterBackground = TASK_BACKGROUNDS[selectedTask.id] ?? '#f2f0e9'
@@ -2181,6 +2059,10 @@ function bindDrag(event: PointerEvent, object: EditorObject, element: HTMLElemen
 
     object.x = initialX + dx
     object.y = initialY + dy
+    if(showGrid && !current.altKey) {
+      const snapX=24+Math.round((object.x-24)/102)*102
+      if(Math.abs(object.x-snapX)<=8/(viewScale||1))object.x=snapX
+    }
     element.style.left = `${object.x}px`
     element.style.top = `${object.y}px`
   }
@@ -2543,7 +2425,7 @@ async function checkWork() {
   let aiState:AiReviewState=import.meta.env.DEV?'local':'unavailable'
   try{
     const starter=starterFor(selectedTask.id,makeInitialObjects())
-    const result=evaluateProject(selectedTask.id,objects,starter,posterBackground)
+    const result=evaluateProject(selectedTask.id,objects,starter,posterBackground,[makeInitialObjects(),makeBaseObjects(selectedTask.id)])
     saveDraft()
     let blob:Blob|null=null
     try{blob=await capturePosterForReview();if(blob)previewUrl=URL.createObjectURL(blob)}catch{ /* local criteria still work if image rendering fails */ }
@@ -2574,15 +2456,16 @@ function showCheckModal(result:Evaluation,previewUrl:string,aiReview:AiReview|nu
   const recommendations=aiReview?.recommendations?.length?aiReview.recommendations:result.recommendations
   const strengths=aiReview?.strengths?.length?aiReview.strengths:result.strengths
   const aiLabel=aiState==='ready'?'ИИ-РАЗБОР ГОТОВ':aiState==='not-configured'?'ИИ НЕ ПОДКЛЮЧЁН':'ПРОВЕРКА ПО КРИТЕРИЯМ'
-  const aiNote=aiState==='not-configured'?'Добавьте OPENAI_API_KEY в настройки проекта Vercel — ключ останется на сервере.':aiState==='unavailable'?'Серверный AI-разбор временно недоступен. Результат по учебным критериям сохранён.':aiState==='local'?'В локальном предпросмотре доступна проверка по учебным критериям.':'Проверка по учебным критериям дополняет визуальный разбор.'
+  const aiNote=aiState==='not-configured'?'Доступна самостоятельная проверка по условиям задания. Развёрнутый ИИ-разбор пока не подключён.':aiState==='unavailable'?'ИИ-разбор временно недоступен. Проверка условий задания работает независимо от него.':aiState==='local'?'В локальном предпросмотре доступна проверка по учебным критериям.':'Проверка по учебным критериям дополняет визуальный разбор.'
   overlay.innerHTML=`<section class="result-modal" aria-label="Результат работы">
-    <header class="result-head"><div><div class="modal-kicker">ЗАДАНИЕ ${selectedTask.number} · ${escapeHtml(selectedTask.title.toUpperCase())}</div><h2>${result.passed?'Хорошая работа.':'Макет можно усилить.'}</h2></div><button class="modal-close" data-close aria-label="Закрыть">${uiIcon('close')}</button></header>
+    <header class="result-head"><div><div class="modal-kicker">ЗАДАНИЕ ${selectedTask.number} · ${escapeHtml(selectedTask.title.toUpperCase())}</div><h2>${result.passed?'Задание выполнено.':result.unchanged?'Это исходный макет.':'Задание пока не зачтено.'}</h2></div><button class="modal-close" data-close aria-label="Закрыть">${uiIcon('close')}</button></header>
     <div class="result-grid">
       <div class="result-poster-wrap">${previewUrl?`<img class="result-poster" src="${previewUrl}" alt="Предпросмотр готового макета">`:`<div class="result-poster-fallback">Предпросмотр макета недоступен</div>`}<a class="result-download" ${previewUrl?`href="${previewUrl}" download="tochka-sborki-${selectedTask.id}.png"`:'aria-disabled="true"'}>Скачать макет PNG ${uiIcon('forward')}</a></div>
-      <div class="result-report"><div class="result-score-line"><div class="score-ring"><span>${result.score}</span><small>/100</small></div><div><div class="result-status ${result.passed?'is-pass':''}">${result.passed?'ЗАДАНИЕ ЗАЧТЕНО':'ЕЩЁ ОДИН ШАГ'}</div><p>${result.passed?'Результат сохранён в прогрессе.':'Используйте рекомендации и проверьте макет ещё раз.'}</p></div></div>
-        <section class="result-section"><div class="result-section-title">ОЦЕНКА ПО ПРИНЦИПАМ</div><div class="analysis-list">${result.items.map(item=>`<div class="analysis-row ${item.points>=15?'good':'warn'}">${uiIcon(item.points>=15?'check':'warning')}<strong>${escapeHtml(item.label)}</strong><b>${item.points}/20</b><small>${escapeHtml(item.detail)}</small></div>`).join('')}</div></section>
+      <div class="result-report"><div class="result-score-line"><div class="score-ring"><span>${result.unchanged?'—':result.score}</span><small>/100</small></div><div><div class="result-status ${result.passed?'is-pass':''}">${result.passed?'ЗАДАНИЕ ЗАЧТЕНО':'НЕ ЗАЧТЕНО'}</div><p>${result.passed?'Результат сохранён в прогрессе.':'В прогресс не засчитано. Выполните условия ниже и проверьте снова.'}</p></div></div>
+        ${!result.passed?`<div class="submission-blockers"><strong>Что мешает зачёту</strong><ul>${result.blockers.map(item=>`<li>${escapeHtml(item)}</li>`).join('')}</ul><p>${result.unchanged?'Исходник не получает итоговую оценку. Критерии ниже показывают, что предстоит сделать.':'Баллы показывают состояние макета. Пока обязательные условия не выполнены, итог ограничен 69 баллами.'}</p></div>`:''}
+        <section class="result-section"><div class="result-section-title">ПРОВЕРКА УСЛОВИЙ ЗАДАНИЯ</div><div class="analysis-list">${result.items.map(item=>`<div class="analysis-row ${item.points===20?'good':'warn'}">${uiIcon(item.points===20?'check':'warning')}<strong>${escapeHtml(item.label)}</strong><b>${item.points}/20</b><small>${escapeHtml(item.detail)}</small></div>`).join('')}</div></section>
         <section class="result-section result-feedback"><div class="result-section-title"><span>${aiLabel}</span><span class="ai-spark">${uiIcon('sparkles')}</span></div>${aiReview?`<p class="ai-summary">${escapeHtml(aiReview.summary)}</p>`:`<p class="ai-status-note">${escapeHtml(aiNote)}</p>`}${strengths.length?`<div class="feedback-strengths"><b>Что уже работает</b>${strengths.slice(0,3).map(item=>`<span>${uiIcon('check')}${escapeHtml(item)}</span>`).join('')}</div>`:''}<div class="feedback-recommendations"><b>Следующие улучшения</b>${recommendations.slice(0,5).map((item,index)=>`<div><i>${String(index+1).padStart(2,'0')}</i><span>${escapeHtml(item)}</span></div>`).join('')}</div></section>
-        <div class="result-actions"><button class="secondary-button" data-close>Продолжить в редакторе</button><button class="primary-button" data-finish>Завершить задание ${uiIcon('forward')}</button></div>
+        <div class="result-actions"><button class="secondary-button" data-close>Продолжить в редакторе</button>${result.passed?`<button class="primary-button" data-finish>К заданиям ${uiIcon('forward')}</button>`:''}</div>
       </div>
     </div>
   </section>`
@@ -2591,6 +2474,7 @@ function showCheckModal(result:Evaluation,previewUrl:string,aiReview:AiReview|nu
   const dialog=overlay.querySelector<HTMLElement>('.result-modal')!
   wireAccessibleDialog(overlay,dialog,()=>{overlay.classList.remove('visible');window.setTimeout(()=>overlay.remove(),240);if(previewUrl)window.setTimeout(()=>URL.revokeObjectURL(previewUrl),30_000)})
   overlay.querySelector<HTMLElement>('[data-finish]')?.addEventListener('click',()=>{
+    if(!result.passed)return
     overlay.classList.remove('visible');window.setTimeout(()=>overlay.remove(),240);if(previewUrl)window.setTimeout(()=>URL.revokeObjectURL(previewUrl),30_000)
     screen='tasks';selectedId=null;render()
   })

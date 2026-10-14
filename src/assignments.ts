@@ -119,122 +119,142 @@ const studioGuidance: Record<string,string[]> = {
   grid: ['Включите сетку. Привяжите название, изображение, описание и программу к общим вертикалям.', 'Выберите один интервал для строк программы. Время и название доклада должны образовать повторяемую структуру.', 'Скройте сетку и проверьте порядок чтения. Если выравнивание распадается без линий, исправьте края блоков.'],
 }
 Object.entries(studioGuidance).forEach(([id,guidance]) => { projects[id].guidance=guidance })
-export function starterFor(_id: string, source: DesignObject[]): DesignObject[] {
-  // Keep the assignment-specific authored starter intact; draft normalization handles older saved projects.
-  return source.map(item => ({ ...item }))
+export const ASSIGNMENT_VERSION = 4
+export const exerciseSpecs: Record<string, {problem:string; acceptance:string[]; directions:string[]}> = {
+  composition: {problem:'В исходнике фотография и заголовок слишком малы: у афиши нет доминанты. Соберите выразительный первый план и спокойный информационный блок.',acceptance:['Название не мельче 40 px; оно или изображение становится доминантой.', 'Главная визуальная масса минимум в 1,5 раза крупнее следующей.', 'Переработаны минимум три элемента; весь обязательный текст читается.'],directions:['Крупная архитектурная фотография и компактная типографика.', 'Крупный заголовок и небольшая фотография как смысловой акцент.']},
+  hierarchy: {problem:'Все текстовые блоки набраны почти одинаково. Превратите список сведений в приглашение с понятным порядком чтения.',acceptance:['Четыре различимых размера текста с разницей от 3 px; максимум две гарнитуры.', 'Тема минимум в 1,35 раза крупнее следующего уровня.', 'Тема, спикер, дата и адрес читаются без пересечений.'],directions:['Тема → имя спикера → формат → детали.', 'Тема → дата → спикер → служебная информация.']},
+  balance: {problem:'Основная фотография стоит по центру. Постройте асимметричный постер и уравновесьте её группой текста с противоположной стороны.',acceptance:['Центр главного изображения смещён минимум на 65 px от оси.', 'Противовес расположен на другой стороне, а не рядом с изображением.', 'Название и дата остаются читаемыми; текст не лежит на фотографии.'],directions:['Изображение слева, имена артистов справа.', 'Изображение справа, типографическая группа слева.']},
+  rhythm: {problem:'В ряду сбиты интервалы, размеры и акценты. Сначала создайте устойчивый повтор, затем нарушьте его ровно один раз.',acceptance:['Пять или шесть прямоугольных модулей в одном ряду или колонке.', 'Равные интервалы с допуском 10 px; одинаковые размеры с допуском 4 px.', 'Ровно один модуль отличается цветом; дата и место не перекрыты.'],directions:['Горизонтальная полоса с одним цветовым акцентом.', 'Вертикальная колонка повторов рядом с программой.']},
+  color: {problem:'Текст и декоративная линия используют несогласованные цвета, дата теряется на светлом фоне. Соберите палитру с понятными ролями.',acceptance:['От двух до четырёх цветов из предложенной палитры, включая фон.', 'Мелкий текст: контраст от 4,5:1; крупный: от 3:1.', 'Изменены минимум три текстовых или графических элемента; цвета фотографии не учитываются.'],directions:['Светлый фон, зелёный текст и охристый акцент.', 'Тёмно-зелёный фон, светлый текст и тёплый акцент.']},
+  grid: {problem:'Расписание и служебные блоки сдвинуты относительно общей сетки. Приведите макет к единой системе колонок и интервалов.',acceptance:['Сетка 6 × 8 внутри полей 24 px; шаг колонки 102 px.', 'Не менее 80% блоков начинаются на линиях сетки с допуском 6 px.', 'Четыре строки программы имеют общий левый край и равный шаг с допуском 8 px.'],directions:['Программа одной колонкой; изображение на несколько модулей.', 'Общая вертикаль для программы, отдельная колонка для места и контактов.']},
 }
+projects.hierarchy.constraints=['Постройте четыре уровня размера текста.', 'Используйте не более двух гарнитур.', 'Сохраните все сведения о событии.']
+projects.hierarchy.guidance=['Выделите тему самым крупным размером.', 'Выберите ещё три размера для спикера, формата и деталей; между соседними размерами оставьте минимум 3 px.', 'Проверьте дату и адрес в уменьшенной афише, уберите наложения.']
+projects.rhythm.guidance=['Выровняйте пять или шесть модулей в ряд либо колонку.', 'Задайте одинаковые размеры и интервалы. Выделите один модуль другим цветом.', 'Согласуйте расположение программы с повтором, сохранив все сведения.']
+projects.rhythm.constraints=['Пять или шесть одинаковых по размеру модулей.', 'Ровно один цветовой акцент в ряду.', 'Равный интервал между модулями.']
+projects.grid.guidance=['Включите сетку внутри полей 24 px. Начала колонок: 24, 126, 228, 330, 432, 534 px.', 'Выровняйте начала блоков, затем задайте одинаковый вертикальный шаг четырём строкам программы.', 'Скройте сетку и проверьте читаемость. Ширина блоков может занимать несколько колонок.']
+projects.grid.constraints=['Поля 24 px, сетка 6 × 8 внутри них.', 'Общий левый край и равные интервалы строк программы.', 'Текст не перекрывает другие строки и фотографии.']
 
-export type Criterion = { label: string; points: number; detail: string }
-export type Evaluation = { score: number; passed: boolean; items: Criterion[]; next: string; strengths: string[]; recommendations: string[] }
-
-const normalize = (value: string) => value.toLocaleUpperCase('ru').replace(/[«»"“”]/g, '').replace(/[–—]/g, '-').replace(/\s+/g, ' ').trim()
-const boundsInside = (item: DesignObject) => {
-  const radians = (item.rotation * Math.PI) / 180
-  const width = Math.abs(item.width * Math.cos(radians)) + Math.abs(item.height * Math.sin(radians))
-  const height = Math.abs(item.width * Math.sin(radians)) + Math.abs(item.height * Math.cos(radians))
-  const left = item.x + (item.width - width) / 2
-  const top = item.y + (item.height - height) / 2
-  return left >= 24 && top >= 24 && left + width <= 636 && top + height <= 906
-}
-const overlap = (a: DesignObject, b: DesignObject) => Math.max(0, Math.min(a.x+a.width,b.x+b.width)-Math.max(a.x,b.x)) * Math.max(0,Math.min(a.y+a.height,b.y+b.height)-Math.max(a.y,b.y))
-
-function brightness(hex: string) {
-  const raw = hex.replace('#','')
-  if (!/^[0-9a-f]{6}$/i.test(raw)) return .5
-  const rgb = [0,2,4].map(offset => parseInt(raw.slice(offset,offset+2),16)/255)
-  const channels = rgb.map(value => value <= .04045 ? value/12.92 : ((value+.055)/1.055)**2.4)
-  return channels[0]*.2126 + channels[1]*.7152 + channels[2]*.0722
-}
-
-function taskCriterion(id: string, objects: DesignObject[], background: string): Criterion {
-  const text = objects.filter(item => item.type === 'text' || item.type === 'date')
-  const visuals = objects.filter(item => item.type === 'shape' || item.type === 'photo')
-  switch (id) {
-    case 'hierarchy': {
-      const sizes = text.map(item => item.fontSize ?? 16).sort((a,b)=>b-a)
-      const levels = new Set(sizes.map(size => Math.round(size / 8)))
-      const clear = sizes.length >= 4 && sizes[0] / Math.max(1, sizes[1]) >= 1.35 && levels.size >= 3
-      return { label:'Иерархия · 4 уровня', points: clear ? 20 : sizes.length >= 3 && levels.size >= 3 ? 14 : 7, detail: clear ? 'Тема, формат, спикер и детали различаются по визуальному весу.' : 'Разведите тему, формат, спикера и служебные детали по размеру, весу или контрасту.' }
-    }
-    case 'balance': {
-      const largest = [...visuals].sort((a,b)=>b.width*b.height-a.width*a.height)[0]
-      const offCenter = largest ? Math.abs(largest.x+largest.width/2-330) > 65 : false
-      const counterweight = objects.some((item) => item !== largest && Math.abs(item.x+item.width/2-330) > 90)
-      return { label:'Асимметричный баланс', points: offCenter && counterweight ? 20 : offCenter || counterweight ? 13 : 7, detail: offCenter && counterweight ? 'Крупная масса смещена, а контрастные детали удерживают равновесие.' : 'Сместите доминанту и уравновесьте её меньшей группой, направлением или свободным полем.' }
-    }
-    case 'rhythm': {
-      const shapes = visuals.filter(item => item.type === 'shape' || item.imageSrc?.includes('rhythm'))
-      const sizes = new Set(shapes.map(item => Math.round(item.width/20)))
-      const positions = new Set(shapes.map(item => Math.round(item.x/24)))
-      const variety = sizes.size >= 2 || positions.size >= 3
-      return { label:'Ритм · повтор и сбой', points: shapes.length >= 5 && variety ? 20 : shapes.length >= 3 ? 14 : 7, detail: shapes.length >= 5 && variety ? 'Повтор считывается, элементы меняют масштаб или шаг.' : 'Соберите серию из пяти мотивов, выдержите интервал и один мотив измените.' }
-    }
-    case 'color': {
-      const colors = new Set([background, ...objects.filter(item => item.type === 'shape').map(item => item.background), ...text.map(item => item.color)].filter((color):color is string=>typeof color==='string'&&/^#[0-9a-f]{6}$/i.test(color)))
-      const palette = projects.color.palette ?? []
-      const familiar = [...colors].every(color => palette.some(value => value.toLowerCase() === String(color).toLowerCase()))
-      return { label:'Цветовая система', points: colors.size >= 2 && colors.size <= 4 && familiar ? 20 : colors.size >= 2 && colors.size <= 4 ? 15 : 7, detail: colors.size <= 4 && familiar ? 'Цвета взяты из заданной палитры и работают как система.' : 'Ограничьте палитру четырьмя оттенками и назначьте им отдельные роли.' }
-    }
-    case 'grid': {
-      const aligned = objects.filter(item => [55,250,445].some(line => Math.abs(item.x-line) <= 16)).length
-      const positions = new Set(objects.map(item => Math.round(item.x/24)))
-      return { label:'Модульная сетка 6 × 8', points: aligned >= 6 ? 20 : aligned >= 4 || positions.size >= 4 ? 14 : 7, detail: aligned >= 6 ? 'Блоки держат несколько общих колонок и поля.' : 'Соберите блоки по трём и более общим колонкам с едиными полями.' }
-    }
-    default: {
-      const largest = [...visuals].sort((a,b)=>b.width*b.height-a.width*a.height)[0]
-      const focal = Boolean(largest && largest.width*largest.height >= 30000 && visuals.length >= 1)
-      return { label:'Композиционный центр', points: focal ? 20 : visuals.length >= 2 ? 14 : 7, detail: focal ? 'Выстроена крупная доминанта и поддерживающие её визуальные массы.' : 'Выберите главную доминанту и поддержите её несколькими меньшими элементами.' }
-    }
+/** Deliberately unfinished exercises, not completed posters offered for submission. */
+export function starterFor(id: string, source: DesignObject[]): DesignObject[] {
+  const result=source.map(item=>({...item}))
+  const change=(key:string,patch:Partial<DesignObject>)=>{const item=result.find(item=>item.id===key);if(item)Object.assign(item,patch)}
+  if(id==='composition') {
+    change('c-title',{fontSize:30,width:290,height:75,letterSpacing:0})
+    change('c-photo',{x:238,y:380,width:180,height:150})
+    change('c-sub',{x:95,y:257,width:500})
+    change('c-date',{x:173,y:706})
   }
+  if(id==='hierarchy') result.filter(item=>item.type==='text').forEach(item=>{item.fontSize=18;item.fontWeight=600;item.letterSpacing=0;item.lineHeight=1.2})
+  if(id==='balance') {change('b-photo',{x:156,y:330,width:348,height:357});change('b-djs',{x:80,y:550,width:330,height:80,fontSize:17,text:'RADIUS / NEON /\nKOSMO / AURA'});change('b-date',{x:145})}
+  if(id==='rhythm') result.filter(item=>item.id.startsWith('r-beat-')).forEach((item,i)=>Object.assign(item,{x:[48,139,249,337,440,554][i],width:[48,68,55,62,38,50][i],height:22,y:290,background:['#202a22','#e1623b','#202a22','#e1623b','#202a22','#202a22'][i]}))
+  if(id==='color') {change('m-title',{color:'#69567d'});change('m-dates',{color:'#d5c8ac'});change('m-rule',{background:'#d7694d'});change('m-program',{color:'#374234'})}
+  if(id==='grid') {change('g-schedule-a',{x:67,y:636});change('g-schedule-b',{x:89,y:682});change('g-schedule-c',{x:53,y:720});change('g-schedule-d',{x:103,y:773});change('g-intro',{x:61});change('g-venue',{x:73})}
+  return result
 }
 
-export function evaluateProject(id: string, objects: DesignObject[], initial: DesignObject[], background: string): Evaluation {
-  const project = projects[id] ?? projects.composition
-  const textObjects = objects.filter(item => item.type === 'text' || item.type === 'date')
-  const visualObjects = objects.filter(item => item.type === 'shape' || item.type === 'photo')
-  const copy = normalize(textObjects.map(item => item.text ?? '').join(' '))
-  const found = project.requiredCopy.filter(value => copy.includes(normalize(value)))
-  const missing = project.requiredCopy.filter(value => !copy.includes(normalize(value)))
-  const infoPoints = Math.round(20 * found.length / Math.max(1, project.requiredCopy.length))
-  const outside = textObjects.filter(item => !boundsInside(item)).length
-  const small = textObjects.filter(item => (item.fontSize ?? 16) < 12).length
-  const textCollisions = textObjects.reduce((count, item, index) => count + (textObjects.slice(index+1).some(other => overlap(item,other) > Math.min(item.width*item.height,other.width*other.height)*.2) ? 1 : 0), 0)
-  const lowContrast = textObjects.filter(item => {
-    const foreground = brightness(item.color ?? '#111111')
-        const index=objects.indexOf(item)
-    const backingShape=objects.slice(0,index).reverse().find(candidate=>candidate.type==='shape' && candidate.x<=item.x && candidate.y<=item.y && candidate.x+candidate.width>=item.x+item.width && candidate.y+candidate.height>=item.y+item.height && (candidate.opacity??1)>=.95)
-    const backing = brightness(backingShape?.background ?? background)
-    return (Math.max(foreground,backing)+.05)/(Math.min(foreground,backing)+.05) < 3.2
-  }).length
-  const craftPoints = Math.max(0, 20 - outside*6 - small*3 - textCollisions*5 - lowContrast*2)
-  const photos = objects.filter(item => item.type === 'photo' && Boolean(item.imageSrc)).length
-  const usableVisuals = visualObjects.filter(item => item.width >= 20 && item.height >= 8 && item.x + item.width > 0 && item.y + item.height > 0 && item.x < 660 && item.y < 930).length
-  const visualPoints = usableVisuals > 0 || textObjects.length >= 4 ? 20 : 8
-  const baseline = new Map(initial.map(item => [item.id,item]))
-  const changed = objects.filter(item => {
-    const before = baseline.get(item.id)
-    if (!before) return true
-    return Math.abs(item.x-before.x) > 18 || Math.abs(item.y-before.y) > 18 || ((item.type === 'photo' || item.type === 'shape') && Math.abs(item.width-before.width) > 18) || ((item.type === 'photo' || item.type === 'shape') && Math.abs(item.height-before.height) > 18) || ((item.type === 'text' || item.type === 'date') && (item.text !== before.text || item.color !== before.color || Math.abs((item.fontSize??0)-(before.fontSize??0)) > 3 || item.fontFamily !== before.fontFamily || item.fontWeight !== before.fontWeight)) || (item.type === 'photo' && item.imageSrc !== before.imageSrc) || (item.type === 'shape' && item.background !== before.background) || Math.abs((item.rotation??0)-(before.rotation??0)) > 3
-  }).length + initial.filter(item => !objects.some(current => current.id === item.id)).length
-  const processPoints = changed >= 5 ? 20 : changed >= 3 ? 15 : changed >= 1 ? 10 : 4
-  const specialized = taskCriterion(id,objects,background)
-  const items = [
-    {label:'Обязательная информация',points:infoPoints,detail:missing.length ? `Добавьте в макет: ${missing.slice(0,3).join(' · ')}${missing.length > 3 ? ' и ещё' : ''}.` : 'Все пункты брифа присутствуют.'},
-    {label:'Читаемость и поля',points:craftPoints,detail:outside || small || textCollisions || lowContrast ? `За форматом: ${outside}; пересечения текста: ${textCollisions}; слабый контраст: ${lowContrast}.` : 'Текст находится в безопасных полях, контраст и порядок чтения сохранены.'},
-    specialized,
-    {label:'Визуальное решение',points:visualPoints,detail:photos ? 'Изображения присутствуют. Проверьте, что каждое поддерживает идею и не мешает чтению.' : 'Типографическое решение допустимо. Дополнительные изображения не обязательны.'},
-    {label:'Авторская сборка',points:processPoints,detail:changed >= 3 ? `Вы заметно переработали ${changed} элементов исходного макета.` : 'Измените композицию и типографику исходного макета, чтобы найти собственное решение.'},
-  ]
-  const score = Math.round(items.reduce((sum,item)=>sum+item.points,0))
-  const passed = score >= 70 && infoPoints >= 16 && craftPoints >= 10 && changed >= 1
-  const strengths = items.filter(item => item.points >= 15).map(item => item.label)
-  const recommendations = [
-    ...(missing.length ? [`Добавьте ${missing.slice(0,2).join(' и ')} — зритель должен быстро получить всю информацию о событии.`] : []),
-    ...(outside || textCollisions || lowContrast || small ? ['Проверьте поля и контраст: важная информация должна читаться в уменьшенной афише и при печати.'] : []),
-    ...(specialized.points < 18 ? [specialized.detail] : []),
-    ...(usableVisuals > 7 ? ['Проверьте, нужен ли каждый визуальный элемент: количество изображений не повышает оценку.'] : []),
-    ...(changed < 5 ? ['Попробуйте ещё один вариант: переставьте главный визуал, измените масштаб заголовка и сравните маршрут взгляда.'] : []),
-  ].slice(0,5)
-  const next = recommendations[0] ?? (passed ? 'Сохраните PNG и подготовьте второй вариант с другим визуальным акцентом.' : 'Проверьте обязательные пункты брифа и критерии выше.')
-  return { score, passed, items, next, strengths, recommendations }
+export type Criterion = { label:string; points:number; detail:string }
+export type Evaluation = {score:number;passed:boolean;items:Criterion[];next:string;strengths:string[];recommendations:string[];blockers:string[];unchanged:boolean}
+const normalize=(value:string)=>value.toLocaleUpperCase('ru').replace(/[«»"“”]/g,'').replace(/[–—]/g,'-').replace(/\s+/g,' ').trim()
+const isText=(item:DesignObject)=>item.type==='text'||item.type==='date'
+const visible=(item:DesignObject)=>(item.opacity??1)>=.5&&item.width>=8&&item.height>=8&&item.x+item.width>24&&item.y+item.height>24&&item.x<636&&item.y<906
+const overlap=(a:DesignObject,b:DesignObject)=>Math.max(0,Math.min(a.x+a.width,b.x+b.width)-Math.max(a.x,b.x))*Math.max(0,Math.min(a.y+a.height,b.y+b.height)-Math.max(a.y,b.y))
+const area=(item:DesignObject)=>Math.min(660,item.width)*Math.min(930,item.height)
+const color=(value:string|undefined,fallback:string)=>String(value??fallback).toLowerCase()
+function boundsInside(item:DesignObject) {
+  const r=(item.rotation??0)*Math.PI/180,w=Math.abs(item.width*Math.cos(r))+Math.abs(item.height*Math.sin(r)),h=Math.abs(item.width*Math.sin(r))+Math.abs(item.height*Math.cos(r))
+  const x=item.x+(item.width-w)/2,y=item.y+(item.height-h)/2
+  return x>=23&&y>=23&&x+w<=637&&y+h<=907
+}
+function brightness(hex:string) {
+  const raw=hex.replace('#','');if(!/^[0-9a-f]{6}$/i.test(raw))return .5
+  const rgb=[0,2,4].map(i=>parseInt(raw.slice(i,i+2),16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4)
+  return rgb[0]*.2126+rgb[1]*.7152+rgb[2]*.0722
+}
+const ratio=(a:string,b:string)=>{const x=brightness(a),y=brightness(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)}
+function differs(a:DesignObject,b:DesignObject) {
+  if(a.type!==b.type)return true
+  if(Math.abs(a.x-b.x)>18||Math.abs(a.y-b.y)>18||Math.abs((a.rotation??0)-(b.rotation??0))>4)return true
+  if(isText(a))return normalize(a.text??'')!==normalize(b.text??'')||Math.abs((a.fontSize??24)-(b.fontSize??24))>3||Math.abs((a.fontWeight??700)-(b.fontWeight??700))>=150||color(a.color,'#111111')!==color(b.color,'#111111')||(a.fontFamily??'Manrope')!==(b.fontFamily??'Manrope')||Math.abs((a.letterSpacing??0)-(b.letterSpacing??0))>1.5
+  return Math.abs(a.width-b.width)>18||Math.abs(a.height-b.height)>18||(a.type==='shape'&&color(a.background,'#8b5cf6')!==color(b.background,'#8b5cf6'))||(a.type==='photo'&&(a.assetId&&b.assetId?a.assetId!==b.assetId:a.imageSrc!==b.imageSrc))
+}
+/** IDs, layer names, default normalization and text auto-height are not creative changes. */
+export function meaningfulChanges(objects:DesignObject[],initial:DesignObject[]) {
+  const pool=[...initial];let changed=0
+  for(const item of objects.filter(visible)) {
+    let index=pool.findIndex(before=>!differs(item,before))
+    if(index>=0){pool.splice(index,1);continue}
+    index=pool.findIndex(before=>before.id===item.id)
+    if(index<0)index=pool.findIndex(before=>before.type===item.type&&(isText(item)?normalize(before.text??'')===normalize(item.text??''):item.assetId?before.assetId===item.assetId:before.name===item.name))
+    if(index>=0)pool.splice(index,1)
+    changed++
+  }
+  // Removing a layer does not by itself demonstrate the target skill.
+  return changed
+}
+function taskCriterion(id:string,objects:DesignObject[],background:string):Criterion {
+  const text=objects.filter(isText),visuals=objects.filter(item=>!isText(item)&&item.materialKind!=='logo'&&area(item)>2500)
+  const title=text.find(item=>normalize(item.text??'')===normalize(projects[id].headline))
+  if(id==='hierarchy') {
+    const sizes=[...new Set(text.map(item=>item.fontSize??16))].sort((a,b)=>b-a),levels=sizes.filter((v,i)=>i===0||sizes[i-1]-v>=3)
+    const clear=!!title&&title.fontSize===sizes[0]&&sizes[0]/Math.max(1,sizes[1]??sizes[0])>=1.35&&levels.length>=4&&new Set(text.map(item=>item.fontFamily??'Manrope')).size<=2
+    return {label:'Четыре уровня иерархии',points:clear?20:levels.length>=3?12:4,detail:clear?'Тема доминирует; четыре размера различаются, гарнитуры согласованы.':'Задайте четыре размера с разницей от 3 px. Тема — минимум в 1,35 раза крупнее следующего уровня; не более двух гарнитур.'}
+  }
+  if(id==='balance') {
+    const main=[...visuals].sort((a,b)=>area(b)-area(a))[0],side=main?(main.x+main.width/2-330):0
+    const opposite=objects.filter(item=>item!==main&&(item.x+item.width/2-330)*side<0&&Math.abs(item.x+item.width/2-330)>65&&area(item)>2500)
+    const clear=Math.abs(side)>=65&&opposite.length>=2
+    return {label:'Асимметрия и противовес',points:clear?20:Math.abs(side)>=65?12:4,detail:clear?'Основная масса смещена; на противоположной стороне есть группа-противовес.':'Сместите центр основного изображения минимум на 65 px и соберите минимум два заметных элемента с противоположной стороны.'}
+  }
+  if(id==='rhythm') {
+    const shapes=objects.filter(item=>item.type==='shape'&&item.width>=16&&item.height>=12)
+    const horizontal=shapes.length>1&&Math.max(...shapes.map(v=>v.y))-Math.min(...shapes.map(v=>v.y))<=8
+    const vertical=shapes.length>1&&Math.max(...shapes.map(v=>v.x))-Math.min(...shapes.map(v=>v.x))<=8
+    const ordered=[...shapes].sort((a,b)=>horizontal?a.x-b.x:a.y-b.y)
+    const gaps=ordered.slice(1).map((v,i)=>horizontal?v.x-ordered[i].x-ordered[i].width:v.y-ordered[i].y-ordered[i].height)
+    const equalSize=shapes.length>0&&Math.max(...shapes.map(v=>v.width))-Math.min(...shapes.map(v=>v.width))<=4&&Math.max(...shapes.map(v=>v.height))-Math.min(...shapes.map(v=>v.height))<=4
+    const colors=new Map<string,number>();shapes.forEach(v=>colors.set(color(v.background,''),(colors.get(color(v.background,''))??0)+1))
+    const accent=colors.size===2&&[...colors.values()].includes(1)
+    const clear=shapes.length>=5&&shapes.length<=6&&(horizontal||vertical)&&equalSize&&gaps.every(v=>v>=4)&&Math.max(...gaps)-Math.min(...gaps)<=10&&accent
+    return {label:'Повтор, интервал, акцент',points:clear?20:shapes.length>=5?10:4,detail:clear?'Равные модули и интервалы создают повтор; один цветовой акцент его нарушает.':'Выстройте 5–6 одинаковых модулей по одной оси, выровняйте промежутки и выделите ровно один модуль цветом.'}
+  }
+  if(id==='color') {
+    const colors=new Set([background,...objects.filter(v=>v.type==='shape').map(v=>v.background??'#8b5cf6'),...text.map(v=>v.color??'#111111')].map(v=>v.toLowerCase()))
+    const palette=projects.color.palette!.map(v=>v.toLowerCase()),unknown=[...colors].filter(v=>!palette.includes(v))
+    const clear=colors.size>=2&&colors.size<=4&&!unknown.length
+    return {label:'Роли цвета и палитра',points:clear?20:colors.size<=4?12:4,detail:clear?'В макете 2–4 цвета из палитры; контраст проверен отдельно.':`Используйте 2–4 цвета из палитры. Сейчас: ${colors.size}.${unknown.length?' Замените: '+unknown.join(', ')+'.':''}`}
+  }
+  if(id==='grid') {
+    const aligned=objects.filter(v=>Array.from({length:6},(_,i)=>24+i*102).some(x=>Math.abs(v.x-x)<=6)).length
+    const rows=text.filter(v=>/^(11:00|13:00|15:00|17:00)/.test((v.text??'').trim())).sort((a,b)=>a.y-b.y)
+    const gaps=rows.slice(1).map((v,i)=>v.y-rows[i].y)
+    const regular=rows.length===4&&Math.max(...rows.map(v=>v.x))-Math.min(...rows.map(v=>v.x))<=6&&Math.max(...gaps)-Math.min(...gaps)<=8&&gaps.every(v=>v>=28)
+    const clear=aligned/Math.max(1,objects.length)>=.8&&regular
+    return {label:'Колонки и расписание',points:clear?20:aligned/Math.max(1,objects.length)>=.5?12:4,detail:clear?'Не менее 80% блоков держат сетку; программа выровнена и имеет равный шаг.':`На сетке ${aligned} из ${objects.length} блоков. Используйте X: 24, 126, 228, 330, 432, 534; четыре строки программы — с общим краем и равным шагом.`}
+  }
+  const masses=[...visuals.map(area),...text.map(v=>(v.fontSize??16)**2*Math.min(16,(v.text??'').length))].sort((a,b)=>b-a)
+  const clear=!!title&&(title.fontSize??0)>=40&&(masses[0]??0)>=30000&&(masses[0]??0)/Math.max(1,masses[1]??0)>=1.5
+  return {label:'Доминанта и подчинение',points:clear?20:10,detail:clear?'Одна масса заметно крупнее остальных, заголовок поддерживает порядок чтения.':'Увеличьте название минимум до 40 px. Сделайте главную массу минимум в 1,5 раза крупнее следующей — изображением или типографикой.'}
+}
+export function evaluateProject(id:string,objects:DesignObject[],initial:DesignObject[],background:string,otherStarters:DesignObject[][]=[]):Evaluation {
+  const project=projects[id]??projects.composition,active=objects.filter(visible),text=active.filter(isText)
+  const readable=text.filter(v=>boundsInside(v)&&(v.fontSize??16)>=12)
+  const copy=normalize(readable.map(v=>v.text??'').join(' ')),missing=project.requiredCopy.filter(value=>!copy.includes(normalize(value)))
+  const outside=text.filter(v=>!boundsInside(v)),small=text.filter(v=>(v.fontSize??16)<12)
+  const collisions=text.filter((v,i)=>text.slice(i+1).some(other=>overlap(v,other)>Math.min(area(v),area(other))*.15))
+  const covered=text.filter(v=>objects.slice(objects.indexOf(v)+1).some(other=>visible(other)&&!isText(other)&&(other.type==='shape'||other.type==='photo'&&other.materialKind==='photo')&&overlap(v,other)>area(v)*.25))
+  const photoText=text.filter(v=>objects.slice(0,objects.indexOf(v)).reverse().find(other=>!isText(other)&&visible(other)&&overlap(v,other)>area(v)*.5)?.type==='photo')
+  const lowContrast=text.filter(v=>{const backing=objects.slice(0,objects.indexOf(v)).reverse().find(other=>other.type==='shape'&&(other.opacity??1)>=.95&&overlap(v,other)>=area(v)*.99);return ratio(v.color??'#111111',backing?.background??background)<((v.fontSize??16)>=24||((v.fontSize??16)>=18&&(v.fontWeight??400)>=700)?3:4.5)})
+  const changed=Math.min(...[initial,...otherStarters].map(baseline=>meaningfulChanges(active,baseline)))
+  const unchanged=changed===0,process=changed>=5?20:changed>=3?16:changed>0?6:0
+  const info=Math.round(20*(project.requiredCopy.length-missing.length)/project.requiredCopy.length)
+  const craft=Math.max(0,20-outside.length*5-small.length*4-collisions.length*5-lowContrast.length*4-covered.length*6-photoText.length*4)
+  const special=taskCriterion(id,active,background)
+  const emptyPhotos=active.filter(v=>v.type==='photo'&&!v.imageSrc),visual=emptyPhotos.length?8:active.length>=4?20:4
+  const blockers=[...(unchanged?['Это исходный макет. Он не засчитывается.']:changed<3?['Переработайте минимум три элемента: одного сдвига или замены недостаточно.']:[]),...(missing.length?[`Добавьте читаемый текст: ${missing.join(' · ')}.`]:[]),...(craft<20?['Исправьте читаемость: '+[...new Set([...outside,...small,...collisions,...lowContrast,...covered,...photoText].map(item=>item.name))].join(', ')+'.']:[]),...(special.points<16?[special.detail]:[]),...(emptyPhotos.length?['Заполните или удалите пустые рамки изображений.']:[])]
+  const items:Criterion[]=[{label:'Сведения о событии',points:info,detail:missing.length?`Не найдены в читаемой области: ${missing.join(' · ')}.`:'Все обязательные сведения присутствуют в пределах макета.'},{label:'Читаемость и поля',points:craft,detail:craft===20?'Текст в полях, без пересечений; контраст достаточен.':`Поля: ${outside.length}; мелкий текст: ${small.length}; пересечения: ${collisions.length}; контраст: ${lowContrast.length}; перекрытие: ${covered.length}; текст на фото: ${photoText.length}.`},special,{label:'Готовность макета',points:visual,detail:emptyPhotos.length?'Остались пустые рамки. Выберите материалы или удалите их.':'Материалы размещены. Художественное качество оценивайте по брифу и самопроверке.'},{label:'Самостоятельная переработка',points:process,detail:unchanged?'Исходник распознан. Изменения имён слоёв, загрузка и автоподгонка текста не считаются работой.':`От ближайшего исходника, включая прежние версии, существенно отличаются элементы: ${changed}. Для зачёта нужно минимум три и выполнение приёма задания.`}]
+  const raw=items.reduce((sum,v)=>sum+v.points,0),passed=blockers.length===0&&raw>=80
+  const score=passed?raw:Math.min(raw,unchanged?0:69)
+  const recommendations=blockers.length?blockers:['Проверьте афишу в миниатюре: сначала тема, затем дата и место.', 'Сохраните PNG и объясните, почему выбранное решение подходит аудитории.']
+  return {score,passed,items,blockers,unchanged,next:recommendations[0],strengths:items.filter(v=>v.points===20).map(v=>v.label),recommendations}
 }

@@ -3743,3 +3743,16 @@ html[data-theme="light"] .editor-shell .panel-label{color:#525462!important}
 .shortcut-guide dl {display:grid;gap:4px;line-height:1.5}
 .shortcut-guide dt {color:var(--text);margin-top:8px;font-weight:600}
 .shortcut-guide dd {margin:0}
+
+/* Practice revision: explicit learning goal, acceptance gates and retained old work. */
+.exercise-challenge {margin:18px 0;padding:16px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+.exercise-challenge h3 {font-size:13px;margin:0 0 8px}
+.exercise-challenge p,.exercise-challenge li {font-size:12px;line-height:1.6}
+.exercise-challenge ul {padding-left:18px;margin:8px 0 16px}
+.exercise-challenge summary {cursor:pointer;font-size:12px}
+.submission-blockers {border:1px solid #b4844b66;background:#b4844b0d;padding:16px;border-radius:12px;margin:16px 0;font-size:13px;line-height:1.6}
+.submission-blockers ul {padding-left:20px}.submission-blockers p {color:var(--muted);font-size:12px}
+.curriculum-note {margin:20px 0;padding:20px;border:1px solid var(--border);border-radius:14px;line-height:1.6}
+.curriculum-note p {color:var(--muted);font-size:13px;max-width:900px}
+.curriculum-note summary {cursor:pointer;font-size:13px}
+.poster.show-grid::before {inset:24px!important;background-size:102px 110.25px!important;border:1px solid #8b6cf655}
