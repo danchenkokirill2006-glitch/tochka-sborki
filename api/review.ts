@@ -73,9 +73,20 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     })
     if (!response.ok) return res.status(502).json({ error: 'review_unavailable' })
 
-    const payload = await response.json() as { success?: boolean; result?: { answer?: unknown } }
+    const payload = await response.json() as {
+      success?: boolean
+      result?: { answer?: unknown }
+      errors?: Array<{ code?: number; message?: string }>
+    }
     const answer = typeof payload.result?.answer === 'string' ? payload.result.answer.trim() : ''
-    if (payload.success === false || !answer) return res.status(502).json({ error: 'empty_review' })
+    if (payload.success === false || !answer) {
+      console.error('[workers-ai] empty or failed response', {
+        httpStatus: response.status,
+        errors: payload.errors?.map(({ code, message }) => ({ code, message })),
+        hasResult: Boolean(payload.result),
+      })
+      return res.status(502).json({ error: 'empty_review' })
+    }
 
     const parsed = parseReview(answer)
     if (!parsed) return res.status(502).json({ error: 'invalid_review' })
