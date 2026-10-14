@@ -146,7 +146,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     const strengths = toList(parsed.strengths, 3)
     const recommendations = toList(parsed.recommendations, 5)
     const looksLikeTemplate = [summary, ...strengths, ...recommendations].some(value =>
-      /краткий вывод|сильная сторона|факт\s*[—-]\s*почему важно|конкретное действие|название поля|улучшить композицию|повысить читаемость|добавить контраст|улучшение читаемости|улучшение иерархии|улучшение композиции|^видимый макет$|^иерархия$|^композиция$/i.test(value),
+      /^(?:краткий вывод|сильная сторона|факт\s*[—-]\s*почему важно|конкретное действие|название поля|улучшить композицию|повысить читаемость|добавить контраст|улучшение читаемости|улучшение иерархии|улучшение композиции|видимый макет|иерархия|композиция)[.!\s]*$/i.test(value),
     )
     const hasRussianCopy = /[А-Яа-яЁё]/.test(summary) && [...strengths, ...recommendations].every(value => /[А-Яа-яЁё]/.test(value))
     if (looksLikeTemplate || !hasRussianCopy || recommendations.length === 0 || recommendations.some(value => value.length < 18)) {
