@@ -75,6 +75,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
     const payload = await response.json() as {
       success?: boolean
+      answer?: unknown
       result?: unknown
       errors?: Array<{ code?: number; message?: string }>
       messages?: unknown[]
@@ -82,7 +83,8 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     const result = payload.result && typeof payload.result === 'object' && !Array.isArray(payload.result)
       ? payload.result as Record<string, unknown>
       : null
-    const answer = typeof result?.answer === 'string' ? result.answer.trim() : ''
+    const answerValue = result?.answer ?? payload.answer
+    const answer = typeof answerValue === 'string' ? answerValue.trim() : ''
     if (payload.success === false || !answer) {
       console.error('[workers-ai] empty or failed response', {
         httpStatus: response.status,
@@ -93,6 +95,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         resultType: typeof payload.result,
         resultIsArray: Array.isArray(payload.result),
         resultFields: payload.result && typeof payload.result === 'object' ? Object.getOwnPropertyNames(payload.result) : [],
+        topLevelFields: Object.getOwnPropertyNames(payload),
         firstResultItemFields: Array.isArray(payload.result) && payload.result[0] && typeof payload.result[0] === 'object'
           ? Object.getOwnPropertyNames(payload.result[0] as object)
           : [],
