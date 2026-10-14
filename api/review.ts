@@ -66,11 +66,12 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   try {
     const encodedImage = image.slice(image.indexOf(',') + 1)
     const binaryImage = atob(encodedImage)
+    const imageBytes = Array.from({ length: binaryImage.length }, (_, index) => binaryImage.charCodeAt(index))
     const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${model}`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${apiToken}`, 'Content-Type': 'application/json' },
       signal: AbortSignal.timeout(28_000),
-      body: JSON.stringify({ image: binaryImage, prompt: question, max_tokens: 500, temperature: 0.2 }),
+      body: JSON.stringify({ image: imageBytes, prompt: question, max_tokens: 500, temperature: 0.2 }),
     })
     if (!response.ok) {
       const providerError = await response.json().catch(() => null) as {
