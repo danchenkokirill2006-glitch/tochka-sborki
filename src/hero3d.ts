@@ -57,7 +57,7 @@ export function mountHeroScene(host: HTMLElement): () => void {
     ribbonShape.quadraticCurveTo(-.46,0,-.42,-.055)
     const points=Array.from({length:97},(_,i)=>{
       const t=i/96*Math.PI*2
-      return new THREE.Vector3(1.4*Math.cos(t),1.75*Math.sin(t),-.9+.35*Math.sin(2*t))
+      return new THREE.Vector3(1.4*Math.cos(t),1.75*Math.sin(t),-.12+.35*Math.sin(2*t))
     })
     const path=new THREE.CatmullRomCurve3(points,true,'centripetal')
     const rawRibbon=new THREE.ExtrudeGeometry(ribbonShape,{steps:240,extrudePath:path,bevelEnabled:false})
@@ -65,14 +65,16 @@ export function mountHeroScene(host: HTMLElement): () => void {
     const smoothRibbon=mergeVertices(rawRibbon); smoothRibbon.computeVertexNormals(); rawRibbon.dispose()
     const ribbon=mesh(smoothRibbon,blue,-.15,.12,0)
     ribbon.rotation.z=.32
-    const ring=mesh(new THREE.TorusGeometry(.88,.16,32,128),glass,.72,-.25,.85)
-    ring.rotation.set(.3,.42,-.32)
-    const satellite=mesh(new THREE.TorusGeometry(.62,.10,24,96),chrome,-.95,-1.35,1.95)
-    satellite.rotation.set(.74,-.2,.16)
-    mesh(new THREE.SphereGeometry(.5,48,32),cream,.7,1.5,.85)
-    const block=mesh(new RoundedBoxGeometry(.65,.65,.65,5,.1),orange,1.2,-1.22,1.75)
+    // Nest the smaller volumes inside the ribbon, sharing its centre of mass.
+    // Keep depth shallow so side views remain a sculpture rather than an exploded diagram.
+    const ring=mesh(new THREE.TorusGeometry(.64,.14,32,128),glass,.05,-.22,.13)
+    ring.rotation.set(.25,.35,-.32)
+    const satellite=mesh(new THREE.TorusGeometry(.31,.075,24,96),chrome,.05,-.22,.13)
+    satellite.rotation.set(.7,-.45,.16)
+    mesh(new THREE.SphereGeometry(.39,48,32),cream,.08,.94,.6)
+    const block=mesh(new RoundedBoxGeometry(.5,.5,.5,5,.09),orange,.28,-1.03,.7)
     block.rotation.set(.2,.36,.24)
-    const bead=mesh(new THREE.SphereGeometry(.16,24,16),chrome,-.8,.65,.35)
+    const bead=mesh(new THREE.SphereGeometry(.14,24,16),chrome,-.5,.64,.15)
     bead.name='counterweight'
     let dragging=false, pointer=-1, x=0,y=0, velocity=0,lastMove=0, visible=true
     const activePointers=new Map<number,{x:number;y:number}>()
