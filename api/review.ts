@@ -75,16 +75,24 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
     const payload = await response.json() as {
       success?: boolean
-      result?: { answer?: unknown }
+      result?: unknown
       errors?: Array<{ code?: number; message?: string }>
     }
-    const answer = typeof payload.result?.answer === 'string' ? payload.result.answer.trim() : ''
+    const result = payload.result && typeof payload.result === 'object' && !Array.isArray(payload.result)
+      ? payload.result as Record<string, unknown>
+      : null
+    const answer = typeof result?.answer === 'string' ? result.answer.trim() : ''
     if (payload.success === false || !answer) {
       console.error('[workers-ai] empty or failed response', {
         httpStatus: response.status,
         errors: payload.errors?.map(({ code, message }) => ({ code, message })),
         hasResult: Boolean(payload.result),
-        resultFields: payload.result && typeof payload.result === 'object' ? Object.keys(payload.result) : [],
+        resultType: typeof payload.result,
+        resultIsArray: Array.isArray(payload.result),
+        resultFields: payload.result && typeof payload.result === 'object' ? Object.getOwnPropertyNames(payload.result) : [],
+        firstResultItemFields: Array.isArray(payload.result) && payload.result[0] && typeof payload.result[0] === 'object'
+          ? Object.getOwnPropertyNames(payload.result[0] as object)
+          : [],
       })
       return res.status(502).json({ error: 'empty_review' })
     }
