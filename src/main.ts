@@ -806,6 +806,7 @@ function openTask(task: Task) {
 
 function render() {
   disposeHero?.(); disposeHero = undefined
+  document.body.classList.toggle('editor-open', screen === 'editor')
   const generation = ++heroGeneration
   workspaceObserver?.disconnect()
   const views: Record<Exclude<Screen, 'editor'>, () => string> = {

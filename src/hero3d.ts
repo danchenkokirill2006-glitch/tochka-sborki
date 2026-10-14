@@ -11,6 +11,7 @@ export function mountHeroScene(host: HTMLElement): () => void {
   let frame = 0
   let observer: ResizeObserver | undefined
   let visibility: IntersectionObserver | undefined
+  const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)')
   const dispose = () => {
     cancelAnimationFrame(frame); events.abort(); observer?.disconnect(); visibility?.disconnect()
     resources.forEach(item => item.dispose()); renderer?.dispose(); renderer?.domElement.remove()
@@ -67,14 +68,15 @@ export function mountHeroScene(host: HTMLElement): () => void {
     ribbon.rotation.z=.32
     // Nest the smaller volumes inside the ribbon, sharing its centre of mass.
     // Keep depth shallow so side views remain a sculpture rather than an exploded diagram.
-    const ring=mesh(new THREE.TorusGeometry(.64,.14,32,128),glass,.05,-.22,.13)
+    // Separate the nested rings along depth so their silhouettes remain distinct.
+    const ring=mesh(new THREE.TorusGeometry(.64,.14,32,128),glass,-.12,-.22,.68)
     ring.rotation.set(.25,.35,-.32)
-    const satellite=mesh(new THREE.TorusGeometry(.31,.075,24,96),chrome,.05,-.22,.13)
+    const satellite=mesh(new THREE.TorusGeometry(.29,.06,24,96),chrome,-.34,-.42,1.08)
     satellite.rotation.set(.7,-.45,.16)
-    mesh(new THREE.SphereGeometry(.39,48,32),cream,.08,.94,.6)
-    const block=mesh(new RoundedBoxGeometry(.5,.5,.5,5,.09),orange,.28,-1.03,.7)
+    mesh(new THREE.SphereGeometry(.39,48,32),cream,.24,.92,1.12)
+    const block=mesh(new RoundedBoxGeometry(.5,.5,.5,5,.09),orange,.48,-1.04,1.12)
     block.rotation.set(.2,.36,.24)
-    const bead=mesh(new THREE.SphereGeometry(.14,24,16),chrome,-.5,.64,.15)
+    const bead=mesh(new THREE.SphereGeometry(.14,24,16),chrome,-.5,.64,.72)
     bead.name='counterweight'
     let dragging=false, pointer=-1, x=0,y=0, velocity=0,lastMove=0, visible=true
     const activePointers=new Map<number,{x:number;y:number}>()
@@ -84,10 +86,10 @@ export function mountHeroScene(host: HTMLElement): () => void {
     const tick=(time:number)=>{
       const dt=Math.min((time-last)/1000,.04);last=time
       if(visible&&!document.hidden){
-        if(!dragging){assembly.rotation.y+=velocity*dt;velocity*=Math.exp(-dt*5);assembly.rotation.y+=dt*.17}
+        if(!dragging&&!motionPreference.matches){assembly.rotation.y+=velocity*dt;velocity*=Math.exp(-dt*5);assembly.rotation.y+=dt*.17}
         draw()
       }
-      frame=requestAnimationFrame(tick)
+      frame=motionPreference.matches ? 0 : requestAnimationFrame(tick)
     }
     const opts={signal:events.signal}
     canvas.addEventListener('pointerdown',e=>{
@@ -126,7 +128,13 @@ export function mountHeroScene(host: HTMLElement): () => void {
     observer=new ResizeObserver(resize);observer.observe(host)
     visibility=new IntersectionObserver(entries=>{visible=entries[0].isIntersecting});visibility.observe(host)
     canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();dispose()},opts)
-    resize();host.setAttribute('data-hero-3d-ready','true');frame=requestAnimationFrame(tick)
+    motionPreference.addEventListener('change',()=>{
+      velocity=0
+      if(motionPreference.matches){cancelAnimationFrame(frame);frame=0;draw()}
+      else if(!frame){last=performance.now();frame=requestAnimationFrame(tick)}
+    },opts)
+    resize();host.setAttribute('data-hero-3d-ready','true')
+    if(!motionPreference.matches)frame=requestAnimationFrame(tick)
     return dispose
   } catch(error) {dispose();console.warn('3D unavailable; showing static fallback.',error);return ()=>undefined}
 }
