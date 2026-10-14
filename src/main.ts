@@ -2393,7 +2393,7 @@ async function exportPoster() {
 }
 
 type AiReview = {summary:string;strengths:string[];recommendations:string[]}
-type AiReviewState = 'ready' | 'not-configured' | 'unavailable' | 'local'
+type AiReviewState = 'ready' | 'not-configured' | 'unavailable' | 'local' | 'source'
 
 async function capturePosterForReview() {
   const poster=app.querySelector<HTMLElement>('[data-poster]')
@@ -2429,7 +2429,9 @@ async function checkWork() {
     saveDraft()
     let blob:Blob|null=null
     try{blob=await capturePosterForReview();if(blob)previewUrl=URL.createObjectURL(blob)}catch{ /* local criteria still work if image rendering fails */ }
-    if(blob&&!import.meta.env.DEV){
+    if(blob&&result.unchanged){
+      aiState='source'
+    }else if(blob&&!import.meta.env.DEV){
       try{
         const image=await blobToDataUrl(blob)
         const project=projects[selectedTask.id]
@@ -2455,8 +2457,8 @@ function showCheckModal(result:Evaluation,previewUrl:string,aiReview:AiReview|nu
   overlay.className='modal-overlay result-overlay'
   const recommendations=aiReview?.recommendations?.length?aiReview.recommendations:result.recommendations
   const strengths=aiReview?.strengths?.length?aiReview.strengths:result.strengths
-  const aiLabel=aiState==='ready'?'ИИ-РАЗБОР ГОТОВ':aiState==='not-configured'?'ИИ НЕ ПОДКЛЮЧЁН':'ПРОВЕРКА ПО КРИТЕРИЯМ'
-  const aiNote=aiState==='not-configured'?'Доступна самостоятельная проверка по условиям задания. Развёрнутый ИИ-разбор пока не подключён.':aiState==='unavailable'?'ИИ-разбор временно недоступен. Проверка условий задания работает независимо от него.':aiState==='local'?'В локальном предпросмотре доступна проверка по учебным критериям.':'Проверка по учебным критериям дополняет визуальный разбор.'
+  const aiLabel=aiState==='ready'?'ИИ-РАЗБОР ГОТОВ':aiState==='not-configured'?'ИИ НЕ ПОДКЛЮЧЁН':aiState==='source'?'ИИ-РАЗБОР ПОСЛЕ ПРАВОК':'ПРОВЕРКА ПО КРИТЕРИЯМ'
+  const aiNote=aiState==='not-configured'?'Доступна самостоятельная проверка по условиям задания. Развёрнутый ИИ-разбор пока не подключён.':aiState==='unavailable'?'ИИ-разбор временно недоступен. Проверка условий задания работает независимо от него.':aiState==='local'?'В локальном предпросмотре доступна проверка по учебным критериям.':aiState==='source'?'ИИ-разбор появится после самостоятельной переработки макета. Исходная версия не оценивается.':'Проверка по учебным критериям дополняет визуальный разбор.'
   overlay.innerHTML=`<section class="result-modal" aria-label="Результат работы">
     <header class="result-head"><div><div class="modal-kicker">ЗАДАНИЕ ${selectedTask.number} · ${escapeHtml(selectedTask.title.toUpperCase())}</div><h2>${result.passed?'Задание выполнено.':result.unchanged?'Это исходный макет.':'Задание пока не зачтено.'}</h2></div><button class="modal-close" data-close aria-label="Закрыть">${uiIcon('close')}</button></header>
     <div class="result-grid">
