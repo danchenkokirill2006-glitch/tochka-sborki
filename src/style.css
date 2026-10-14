@@ -3068,8 +3068,6 @@ button:disabled{cursor:not-allowed;opacity:.4}
 @media(max-width:1100px){.topbar{height:auto;min-height:76px;flex-wrap:wrap;padding-block:12px;gap:12px}.main-nav{order:3;width:100%;justify-content:center;overflow:auto}.main-nav button{flex:1;padding:8px!important;font-size:10px}.main-nav button span{display:none}.topbar-right{margin-left:auto}.status-pill{display:none}}
 @media(max-width:820px){.editor-layout{height:auto;min-height:0;grid-template-columns:1fr!important}.workspace{order:1!important;height:72dvh;min-height:440px!important}.left-panel{order:2!important;max-height:none}.right-panel{order:3!important}.task-brief{max-width:none}.editor-topbar{height:auto;min-height:72px;flex-wrap:wrap;gap:12px;padding:12px}.editor-top-actions{margin-left:auto}.editor-top-actions .secondary-button{display:flex!important}.hero h1{font-size:clamp(44px,9vw,72px)!important}.hero-visual{overflow:visible}.feature-card .feature-card-visual{height:230px!important;min-height:230px!important;flex-basis:230px!important}}
 @media(max-width:480px){.editor-brand .brand-title{font-size:10px}.editor-top-actions{width:100%;justify-content:space-between}.workspace-toolbar{gap:8px}.workspace-toolbar>div:first-child{display:none}.hero h1{font-size:clamp(39px,10vw,48px)!important}.hero-visual{min-height:400px}.main-nav button{font-size:9px!important;padding:7px 4px!important}.subscription-button{display:none}.feature-card .feature-card-visual{height:220px!important;min-height:220px!important;flex-basis:220px!important}}
-/* The floating AI launcher sits over the editor's bottom-right layer list. Reserve a safe scroll area so no layer can be hidden behind it. */
-.editor-open .right-panel .layers{padding-bottom:76px!important;scroll-padding-block-end:76px}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:140ms!important;scroll-behavior:auto!important}}
 .export-preview{position:relative;width:min(540px,94vw);max-height:94dvh;overflow:auto;background:#191620;color:#eee8f7;border:1px solid #473856;border-radius:22px;padding:26px;box-shadow:0 30px 100px #0008;text-align:center}
 .export-preview h2{font-size:27px;margin:8px 0}.export-preview p{font-size:11px;line-height:1.6;color:#aca2bb;margin-bottom:16px}
@@ -3758,3 +3756,8 @@ html[data-theme="light"] .editor-shell .panel-label{color:#525462!important}
 .curriculum-note p {color:var(--muted);font-size:13px;max-width:900px}
 .curriculum-note summary {cursor:pointer;font-size:13px}
 .poster.show-grid::before {inset:24px!important;background-size:102px 110.25px!important;border:1px solid #8b6cf655}
+
+/* Keep the AI shortcut out of the layer list while editing. */
+.editor-open .ai-chat-launcher{position:fixed;right:calc(clamp(225px,21.5vw,274px) + 16px);bottom:max(18px,env(safe-area-inset-bottom));width:52px;height:52px;padding:0;justify-content:center;border-radius:50%;margin:0}
+.editor-open .ai-chat-launcher span{display:none}
+@media(max-width:820px){.editor-open .ai-chat-launcher{right:16px;bottom:max(16px,env(safe-area-inset-bottom))}}
