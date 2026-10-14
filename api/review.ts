@@ -6,7 +6,7 @@ export const config = { api: { bodyParser: { sizeLimit: '4mb' } } }
 const allowedTasks = new Set(['composition', 'hierarchy', 'balance', 'rhythm', 'color', 'grid'])
 const recentCalls = new Map<string, number[]>()
 const serverEnv = (globalThis as typeof globalThis & { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {}
-const model = '@cf/moondream/moondream3.1-9B-A2B'
+const model = '@cf/llava-hf/llava-1.5-7b-hf'
 
 type Review = { summary?: unknown; strengths?: unknown; recommendations?: unknown }
 
@@ -65,11 +65,14 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   ].join('\n')
 
   try {
+    const encodedImage = image.slice(image.indexOf(',') + 1)
+    const binaryImage = atob(encodedImage)
+    const imageBytes = Array.from({ length: binaryImage.length }, (_, index) => binaryImage.charCodeAt(index))
     const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${model}`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${apiToken}`, 'Content-Type': 'application/json' },
       signal: AbortSignal.timeout(28_000),
-      body: JSON.stringify({ task: 'query', image, question, max_tokens: 600, temperature: 0.3 }),
+      body: JSON.stringify({ image: imageBytes, prompt: question, max_tokens: 600 }),
     })
     if (!response.ok) return res.status(502).json({ error: 'review_unavailable' })
 
@@ -83,7 +86,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     const result = payload.result && typeof payload.result === 'object' && !Array.isArray(payload.result)
       ? payload.result as Record<string, unknown>
       : null
-    const answerValue = result?.answer ?? payload.answer
+    const answerValue = result?.description ?? result?.answer ?? payload.answer
     const answer = typeof answerValue === 'string' ? answerValue.trim() : ''
     if (payload.success === false || !answer) {
       console.error('[workers-ai] empty or failed response', {
