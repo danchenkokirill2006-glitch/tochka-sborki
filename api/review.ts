@@ -69,7 +69,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       method: 'POST',
       headers: { Authorization: `Bearer ${apiToken}`, 'Content-Type': 'application/json' },
       signal: AbortSignal.timeout(28_000),
-      body: JSON.stringify({ task: 'query', image, question, reasoning: false, max_tokens: 600, temperature: 0.3 }),
+      body: JSON.stringify({ task: 'query', image, question, max_tokens: 600, temperature: 0.3 }),
     })
     if (!response.ok) return res.status(502).json({ error: 'review_unavailable' })
 
