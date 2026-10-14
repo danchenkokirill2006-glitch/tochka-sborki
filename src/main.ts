@@ -1,5 +1,6 @@
 import { makeBaseObjects, makeReferenceObjects } from './task-layouts'
 import './style.css'
+import { mountAiChat } from './ai-chat'
 let disposeHero: (() => void) | undefined
 let heroGeneration = 0
 import { toBlob } from 'html-to-image'
@@ -949,20 +950,20 @@ function renderTasks() {
 function renderAssistant() {
   const completed = tasks.filter(task => task.score > 0)
   const latest = completed[completed.length - 1]
-  return `<main class="shell inner-shell">${renderPageHeader('04', 'Разбор работы.', 'Проверка плаката по учебным критериям работает без подключения ИИ. Расширенный персональный разбор появится после подключения сервера.', 'assistant')}
+  return `<main class="shell inner-shell">${renderPageHeader('04', 'Взгляд со стороны.', 'Обсудите идею с ИИ-наставником или получите визуальный разбор своей работы в редакторе.', 'assistant')}
     <section class="assistant-layout reveal">
       <article class="assistant-main">
         <div class="assistant-orb">${uiIcon('sparkles')}</div>
-        <div class="card-kicker">ПРИМЕР / УЧЕБНЫЙ РАЗБОР</div>
+        <div class="card-kicker">ИИ-НАСТАВНИК / ПРАКТИКА ДИЗАЙНА</div>
         <h2>Понятные критерии.<br><em>Конкретный следующий шаг.</em></h2>
-        <p>Откройте задание, соберите плакат и нажмите «Проверить по критериям». Результат рассчитывается локально по содержанию и структуре макета. ИИ пока не подключён и не влияет на зачёт.</p>
+        <p>Нужна подсказка по цвету, шрифтам или композиции? Задайте вопрос в чате. Для разбора готового макета нажмите «Проверить» в редакторе: ИИ рассмотрит изображение и предложит конкретные правки. Зачёт определяется условиями задания и работает независимо от ИИ.</p>
         <div class="assistant-actions">
           <button class="primary-button" data-screen="tasks">ОТКРЫТЬ ЗАДАНИЯ ${uiIcon('forward')}</button>
-          <button class="ghost-button" data-task="composition">ПОСМОТРЕТЬ ПРИМЕР ЗАДАНИЯ ${uiIcon('forward')}</button>
+          <button class="ghost-button" data-open-ai-chat>СПРОСИТЬ ИИ ${uiIcon('sparkles')}</button>
         </div>
       </article>
       <aside class="assistant-side">
-        <div class="assistant-status"><span></span> ПРОВЕРКА БЕЗ ИИ / ${latest ? `ПОСЛЕДНИЙ РЕЗУЛЬТАТ ${latest.score}/100` : 'ПРОВЕРКА ЕЩЁ НЕ ПРОХОДИЛА'}</div>
+        <div class="assistant-status"><span></span> ${latest ? `ПОСЛЕДНИЙ РЕЗУЛЬТАТ ${latest.score}/100` : '20 ВОПРОСОВ И 8 ИИ-РАЗБОРОВ В ДЕНЬ'}</div>
         <div class="assistant-item"><strong>01</strong><div><b>Найти проблему</b><small>Иерархия, баланс, ритм, интервалы и выравнивание.</small></div></div>
         <div class="assistant-item"><strong>02</strong><div><b>Объяснить принцип</b><small>Почему конкретный приём влияет на восприятие макета.</small></div></div>
         <div class="assistant-item"><strong>03</strong><div><b>Предложить следующий ход</b><small>Что изменить первым, чтобы не переделывать всё сразу.</small></div></div>
@@ -2233,7 +2234,7 @@ function showSubscriptionModal() {
       <p class="modal-lead">Демонстрационная подписка. Платежей пока нет — активация работает локально и нужна для прототипа будущей системы доступа.</p>
       <div class="plan-grid">
         <article class="plan-card"><span>START</span><strong>Бесплатно</strong><p>Вся теория, шесть заданий, редактор, сохранение, PNG и проверка по критериям.</p><button class="ghost-button" data-close>ТЕКУЩИЙ ДОСТУП</button></article>
-        <article class="plan-card plan-card-pro"><span>PRO</span><strong>Демо</strong><p>Прототип будущего расширенного доступа. Персональный разбор через ИИ пока не подключён.</p><button class="primary-button" data-subscribe>ВКЛЮЧИТЬ ДЕМО ${uiIcon('forward')}</button></article>
+        <article class="plan-card plan-card-pro"><span>PRO</span><strong>Демо</strong><p>Прототип будущего расширенного доступа. Чат и ИИ-разбор доступны без подписки в пределах дневного лимита.</p><button class="primary-button" data-subscribe>ВКЛЮЧИТЬ ДЕМО ${uiIcon('forward')}</button></article>
       </div>
       <div class="subscription-note"><span>${uiIcon('check')}</span> Без реальной оплаты · <span>${uiIcon('check')}</span> Можно отключить в любой момент · <span>${uiIcon('check')}</span> Сейчас это mock-система</div>
     </div>`
@@ -2393,7 +2394,7 @@ async function exportPoster() {
 }
 
 type AiReview = {summary:string;strengths:string[];recommendations:string[]}
-type AiReviewState = 'ready' | 'not-configured' | 'unavailable' | 'local' | 'source'
+type AiReviewState = 'ready' | 'not-configured' | 'unavailable' | 'limited' | 'source'
 
 async function capturePosterForReview() {
   const poster=app.querySelector<HTMLElement>('[data-poster]')
@@ -2422,7 +2423,8 @@ async function checkWork() {
   if(button){button.disabled=true;button.dataset.originalLabel=button.textContent??'';button.textContent='СМОТРИМ МАКЕТ…'}
   let previewUrl=''
   let aiReview:AiReview|null=null
-  let aiState:AiReviewState=import.meta.env.DEV?'local':'unavailable'
+  let aiState:AiReviewState='unavailable'
+  let aiErrorNote=''
   try{
     const starter=starterFor(selectedTask.id,makeInitialObjects())
     const result=evaluateProject(selectedTask.id,objects,starter,posterBackground,[makeInitialObjects(),makeBaseObjects(selectedTask.id)])
@@ -2431,18 +2433,20 @@ async function checkWork() {
     try{blob=await capturePosterForReview();if(blob)previewUrl=URL.createObjectURL(blob)}catch{ /* local criteria still work if image rendering fails */ }
     if(blob&&result.unchanged){
       aiState='source'
-    }else if(blob&&!import.meta.env.DEV){
+    }else if(blob){
       try{
         const image=await blobToDataUrl(blob)
         const project=projects[selectedTask.id]
-        const response=await fetch('/api/review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({taskId:selectedTask.id,brief:`${project.objective}\nФокус: ${project.focus}\nОбязательный текст: ${project.requiredCopy.join(' · ')}\nОграничения: ${project.constraints.join(' · ')}`,image})})
-        if(response.status===503){aiState='not-configured'}
-        else if(response.ok){const data=await response.json() as {review?:Partial<AiReview>};if(data.review&&typeof data.review.summary==='string'){aiReview={summary:data.review.summary,strengths:Array.isArray(data.review.strengths)?data.review.strengths:[],recommendations:Array.isArray(data.review.recommendations)?data.review.recommendations:[]};aiState='ready'}}
+        const response=await fetch('/api/review',{method:'POST',headers:{'Content-Type':'application/json'},signal:AbortSignal.timeout(50_000),body:JSON.stringify({taskId:selectedTask.id,brief:`${project.objective}\nФокус: ${project.focus}\nОбязательный текст: ${project.requiredCopy.join(' · ')}\nОграничения: ${project.constraints.join(' · ')}`,image})})
+        const data=await response.json().catch(()=>({})) as {review?:Partial<AiReview>;error?:string;retryAfter?:number}
+        if(data.error==='ai_not_configured'){aiState='not-configured'}
+        else if(response.status===429){aiState='limited';aiErrorNote=data.error==='rate_limited'?`Следующий ИИ-разбор доступен через ${data.retryAfter||15} с. Проверка условий уже выполнена.`:data.error==='daily_limit'?'На сегодня использованы 8 ИИ-разборов. Проверка условий продолжает работать.':data.error==='daily_provider_limit'?'Бесплатная квота Cloudflare на сегодня исчерпана. ИИ снова заработает после её обновления. Проверка условий продолжает работать.':'ИИ-сервис занят. Проверка условий продолжает работать.'}
+        else if(response.ok){if(data.review&&typeof data.review.summary==='string'){aiReview={summary:data.review.summary,strengths:Array.isArray(data.review.strengths)?data.review.strengths:[],recommendations:Array.isArray(data.review.recommendations)?data.review.recommendations:[]};aiState='ready'}}
         else aiState='unavailable'
       }catch{aiState='unavailable'}
     }
     if(result.passed&&result.score>selectedTask.score){selectedTask.score=result.score;saveScores()}
-    showCheckModal(result,previewUrl,aiReview,aiState)
+    showCheckModal(result,previewUrl,aiReview,aiState,aiErrorNote)
   }catch{
     if(previewUrl)URL.revokeObjectURL(previewUrl)
     notify('Не удалось завершить проверку. Макет сохранён — попробуйте ещё раз')
@@ -2452,13 +2456,13 @@ async function checkWork() {
   }
 }
 
-function showCheckModal(result:Evaluation,previewUrl:string,aiReview:AiReview|null,aiState:AiReviewState) {
+function showCheckModal(result:Evaluation,previewUrl:string,aiReview:AiReview|null,aiState:AiReviewState,aiErrorNote='') {
   const overlay=document.createElement('div')
   overlay.className='modal-overlay result-overlay'
   const recommendations=aiReview?aiReview.recommendations:result.recommendations
   const strengths=aiReview?aiReview.strengths:result.strengths
   const aiLabel=aiState==='ready'?'ИИ-РАЗБОР ГОТОВ':aiState==='not-configured'?'ИИ НЕ ПОДКЛЮЧЁН':aiState==='source'?'ИИ-РАЗБОР ПОСЛЕ ПРАВОК':'ПРОВЕРКА ПО КРИТЕРИЯМ'
-  const aiNote=aiState==='not-configured'?'Доступна самостоятельная проверка по условиям задания. Развёрнутый ИИ-разбор пока не подключён.':aiState==='unavailable'?'ИИ-разбор временно недоступен. Проверка условий задания работает независимо от него.':aiState==='local'?'В локальном предпросмотре доступна проверка по учебным критериям.':aiState==='source'?'ИИ-разбор появится после самостоятельной переработки макета. Исходная версия не оценивается.':'Проверка по учебным критериям дополняет визуальный разбор.'
+  const aiNote=aiErrorNote||(aiState==='not-configured'?'Доступна самостоятельная проверка по условиям задания. Развёрнутый ИИ-разбор пока не подключён.':aiState==='unavailable'?'ИИ-разбор временно недоступен. Проверка условий задания работает независимо от него.':aiState==='source'?'ИИ-разбор появится после самостоятельной переработки макета. Исходная версия не оценивается.':'Проверка по учебным критериям дополняет визуальный разбор.')
   overlay.innerHTML=`<section class="result-modal" aria-label="Результат работы">
     <header class="result-head"><div><div class="modal-kicker">ЗАДАНИЕ ${selectedTask.number} · ${escapeHtml(selectedTask.title.toUpperCase())}</div><h2>${result.passed?'Задание выполнено.':result.unchanged?'Это исходный макет.':'Задание пока не зачтено.'}</h2></div><button class="modal-close" data-close aria-label="Закрыть">${uiIcon('close')}</button></header>
     <div class="result-grid">
@@ -2484,5 +2488,6 @@ function showCheckModal(result:Evaluation,previewUrl:string,aiReview:AiReview|nu
 
 injectIconOverrides()
 render()
+mountAiChat()
 
 

@@ -5,10 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
+    "build": "tsc && tsc -p tsconfig.server.json && vite build",
+    "preview": "vite preview",
+    "test:ai": "tsc --ignoreConfig --target ES2022 --module NodeNext --moduleResolution NodeNext --types node --strict --skipLibCheck --outDir .vercel/ai-test api/chat.ts api/review.ts server/ai.ts && node --test tests/ai-api.test.mjs"
   },
   "devDependencies": {
+    "@types/node": "^26.6.5",
     "@types/three": "^0.186.0",
     "typescript": "~6.0.2",
     "vite": "^8.2.2"
