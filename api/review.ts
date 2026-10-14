@@ -74,7 +74,18 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       signal: AbortSignal.timeout(28_000),
       body: JSON.stringify({ image: imageBytes, prompt: question, max_tokens: 600 }),
     })
-    if (!response.ok) return res.status(502).json({ error: 'review_unavailable' })
+    if (!response.ok) {
+      const providerError = await response.json().catch(() => null) as {
+        errors?: Array<{ code?: number; message?: string }>
+        messages?: unknown[]
+      } | null
+      console.error('[workers-ai] provider request failed', {
+        httpStatus: response.status,
+        errors: providerError?.errors?.map(({ code, message }) => ({ code, message })),
+        messages: providerError?.messages,
+      })
+      return res.status(502).json({ error: 'review_unavailable' })
+    }
 
     const payload = await response.json() as {
       success?: boolean
@@ -116,7 +127,8 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         recommendations: toList(parsed.recommendations, 5),
       },
     })
-  } catch {
+  } catch (error) {
+    console.error('[workers-ai] request failed', { name: error instanceof Error ? error.name : 'unknown' })
     return res.status(502).json({ error: 'review_unavailable' })
   }
 }
