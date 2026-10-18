@@ -596,6 +596,9 @@ function refreshPropertiesPanel() {
   const host = app.querySelector<HTMLElement>('[data-properties-host]')
   if (!host) return
   const object = selectedObject()
+  const panel = host.closest<HTMLElement>('.right-panel')
+  panel?.classList.toggle('has-selection', Boolean(object))
+  panel?.classList.toggle('is-empty', !object)
   host.innerHTML = object ? renderProperties(object) : renderEmptyProperties()
   bindPropertyControls()
   updatePropertyInputs()
@@ -818,6 +821,8 @@ function render() {
     profile: renderProfile,
   }
   app.innerHTML = screen === 'editor' ? renderEditor() : views[screen]()
+  const main = app.querySelector('main')
+  if (main) main.id = 'main-content'
   bindEvents()
   const heroHost = app.querySelector<HTMLElement>('[data-hero-scene]')
   if (heroHost) void import('./hero3d').then(({mountHeroScene}) => {
@@ -844,10 +849,10 @@ function renderPageHeader(kicker: string, title: string, description: string, ac
   return `
     <header class="topbar">
       <button class="brand" data-screen="home" aria-label="На главную">
-        <span class="brand-logo" aria-hidden="true"><img src="${LOGO_SIGN_SRC}" alt=""></span>
+        <span class="brand-logo" aria-hidden="true"><img src="${LOGO_SIGN_SRC}" alt="" width="38" height="38"></span><span class="brand-wordmark">Точка сборки</span>
       </button>
       ${renderNav(active)}
-      <div class="topbar-right"><button class="subscription-button" data-action="subscription"><span>PRO</span> ПОДПИСКА</button><button class="theme-toggle" data-action="theme" aria-label="Включить ${theme === 'light' ? 'тёмную' : 'светлую'} тему"><span class="theme-icon" aria-hidden="true">${uiIcon(theme === 'light' ? 'sun' : 'moon')}</span><span class="theme-label">${theme === 'light' ? 'ТЁМНАЯ' : 'СВЕТЛАЯ'}</span></button><div class="status-pill"><span></span> СИСТЕМА ГОТОВА</div><button class="avatar avatar-button" data-screen="profile" aria-label="Личный кабинет">${profile.photo ? `<img src="${profile.photo}" alt="">` : escapeHtml(profile.name.trim().slice(0,1).toLocaleUpperCase('ru') || 'К')}</button></div>
+      <div class="topbar-right"><button class="subscription-button" data-action="subscription"><span>PRO</span> Подписка</button><button class="theme-toggle" data-action="theme" aria-label="Включить ${theme === 'light' ? 'тёмную' : 'светлую'} тему"><span class="theme-icon" aria-hidden="true">${uiIcon(theme === 'light' ? 'sun' : 'moon')}</span><span class="theme-label">${theme === 'light' ? 'Тёмная' : 'Светлая'}</span></button><button class="avatar avatar-button" data-screen="profile" aria-label="Личный кабинет">${profile.photo ? `<img src="${profile.photo}" alt="">` : escapeHtml(profile.name.trim().slice(0,1).toLocaleUpperCase('ru') || 'К')}</button></div>
     </header>
     <div class="content-heading reveal">
       <div><div class="eyebrow"><span>${kicker}</span> ОБУЧАЮЩАЯ СРЕДА</div><h1>${title}</h1><p>${description}</p></div>
@@ -859,10 +864,10 @@ function renderHome() {
     <main class="shell home-shell">
       <header class="topbar">
         <button class="brand" data-screen="home" aria-label="На главную">
-          <span class="brand-logo" aria-hidden="true"><img src="${LOGO_SIGN_SRC}" alt=""></span>
+          <span class="brand-logo" aria-hidden="true"><img src="${LOGO_SIGN_SRC}" alt="" width="38" height="38"></span><span class="brand-wordmark">Точка сборки</span>
         </button>
         ${renderNav('home')}
-        <div class="topbar-right"><button class="subscription-button" data-action="subscription"><span>PRO</span> ПОДПИСКА</button><button class="theme-toggle" data-action="theme" aria-label="Включить ${theme === 'light' ? 'тёмную' : 'светлую'} тему"><span class="theme-icon" aria-hidden="true">${uiIcon(theme === 'light' ? 'sun' : 'moon')}</span><span class="theme-label">${theme === 'light' ? 'ТЁМНАЯ' : 'СВЕТЛАЯ'}</span></button><div class="status-pill"><span></span> СИСТЕМА ГОТОВА</div><button class="avatar avatar-button" data-screen="profile" aria-label="Личный кабинет">${profile.photo ? `<img src="${profile.photo}" alt="">` : escapeHtml(profile.name.trim().slice(0,1).toLocaleUpperCase('ru') || 'К')}</button></div>
+        <div class="topbar-right"><button class="subscription-button" data-action="subscription"><span>PRO</span> Подписка</button><button class="theme-toggle" data-action="theme" aria-label="Включить ${theme === 'light' ? 'тёмную' : 'светлую'} тему"><span class="theme-icon" aria-hidden="true">${uiIcon(theme === 'light' ? 'sun' : 'moon')}</span><span class="theme-label">${theme === 'light' ? 'Тёмная' : 'Светлая'}</span></button><button class="avatar avatar-button" data-screen="profile" aria-label="Личный кабинет">${profile.photo ? `<img src="${profile.photo}" alt="">` : escapeHtml(profile.name.trim().slice(0,1).toLocaleUpperCase('ru') || 'К')}</button></div>
       </header>
 
       <section class="hero">
@@ -943,7 +948,7 @@ function renderTasks() {
   return `<main class="shell inner-shell">${renderPageHeader('03', 'Собирай на практике.', 'Выбирайте задачу, продолжайте начатое и сравнивайте свои результаты.', 'tasks')}
     <section class="task-list-page">
       <div class="task-filter-row"><div class="filter-pills" role="group" aria-label="Фильтр заданий"><button class="active" data-filter="all" aria-pressed="true">Все</button><button data-filter="Базовый" aria-pressed="false">Базовый</button><button data-filter="Средний" aria-pressed="false">Средний</button><button data-filter="Продвинутый" aria-pressed="false">Продвинутый</button></div><span class="list-counter" aria-live="polite">${tasks.length} МОДУЛЕЙ</span></div>
-      <div class="curriculum-note"><strong>Практикум обновлён · 6 самостоятельных проектов</strong><p>В каждом исходнике есть учебная проблема. Зачёт: все обязательные сведения, читаемость, приём задания и переработка минимум трёх элементов. Старые макеты доступны в редакторе через «Открыть прежнюю работу».</p>${Object.values(users[currentUserId]?.previousScores??{}).some(value=>value>0)?`<details><summary>Результаты прежней версии — требуется повторная проверка</summary><ul>${tasks.filter(task=>(users[currentUserId]?.previousScores?.[task.id]??0)>0).map(task=>`<li>${task.title}: ${users[currentUserId].previousScores![task.id]} / 100</li>`).join('')}</ul></details>`:''}</div><div class="task-list">${tasks.map(task => `<article class="task-row-card reveal" data-level="${task.level}"><div class="task-row-icon accent-${task.accent}">${uiIcon(task.icon as keyof typeof UI_ICON_SVGS)}</div><div class="task-row-main"><div class="task-row-number">${task.number}</div><div><h2>${projects[task.id].headline}</h2><p>${task.title} · ${projects[task.id].focus}</p><div class="task-meta"><span>${task.level}</span><span>${task.time}</span></div></div></div><div class="task-result"><span>РЕЗУЛЬТАТ</span><strong>${task.score || '—'}</strong></div><button class="task-row-action" data-task="${task.id}">${task.score || hasDraft(task.id) ? 'ПРОДОЛЖИТЬ' : 'НАЧАТЬ'} ${uiIcon('forward')}</button></article>`).join('')}</div>
+      <details class="curriculum-note"><summary><span>Как устроен практикум</span><small>6 проектов · задания с проверкой</small></summary><p>В каждом исходнике есть учебная проблема. Для зачёта нужны обязательные сведения, читаемость, приём задания и переработка минимум трёх элементов. Прежние макеты можно открыть в редакторе.</p>${Object.values(users[currentUserId]?.previousScores??{}).some(value=>value>0)?`<div class="previous-results"><strong>Результаты прежней версии требуют повторной проверки</strong><ul>${tasks.filter(task=>(users[currentUserId]?.previousScores?.[task.id]??0)>0).map(task=>`<li>${task.title}: ${users[currentUserId].previousScores![task.id]} / 100</li>`).join('')}</ul></div>`:''}</details><div class="task-list">${tasks.map(task => { const preview = taskMaterials[task.id]?.find(item => item.kind === 'photo') ?? taskMaterials[task.id]?.[0]; return `<article class="task-row-card reveal" data-level="${task.level}"><div class="task-row-preview">${preview ? `<img src="${escapeHtml(preview.src)}" alt="" loading="lazy" width="116" height="96">` : uiIcon(task.icon as keyof typeof UI_ICON_SVGS)}<span>${task.number}</span></div><div class="task-row-main"><div class="task-row-number">${task.number}</div><div><h2>${projects[task.id].headline}</h2><p>${task.title} · ${projects[task.id].focus}</p><div class="task-meta"><span>${task.level}</span><span>${task.time}</span></div></div></div><div class="task-result"><span>РЕЗУЛЬТАТ</span><strong>${task.score || '—'}</strong></div><button class="task-row-action" data-task="${task.id}">${task.score || hasDraft(task.id) ? 'ПРОДОЛЖИТЬ' : 'НАЧАТЬ'} ${uiIcon('forward')}</button></article>` }).join('')}</div>
     </section>
   </main>`
 }
@@ -1095,7 +1100,7 @@ function renderEditor() {
             <button data-add="date"><span class="element-icon">${uiIcon('date')}</span>Дата</button>
             <button data-add="shape"><span class="element-icon">${uiIcon('shape')}</span>Форма</button>
           </div>
-          <details class="materials-drawer" open><summary>Материалы</summary>${renderMaterialLibrary()}</details>
+          <details class="materials-drawer" open><summary>Материалы задания <span>${taskMaterials[selectedTask.id]?.length ?? 0}</span></summary>${renderMaterialLibrary()}</details>
 
           <div class="panel-divider"></div>
           <div class="panel-label">ИНСТРУМЕНТЫ</div>
@@ -1167,7 +1172,7 @@ function renderEditor() {
           </div>
         </section>
 
-        <aside class="right-panel panel">
+        <aside class="right-panel panel ${object ? 'has-selection' : 'is-empty'}">
           <section class="inspector-dock"><div class="panel-label">СВОЙСТВА</div>
           <div data-properties-host="true">${object ? renderProperties(object) : renderEmptyProperties()}</div>
 
