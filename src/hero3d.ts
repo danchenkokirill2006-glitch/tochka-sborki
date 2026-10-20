@@ -76,17 +76,17 @@ export function mountHeroScene(host: HTMLElement): () => void {
     ribbon.rotation.z=.32
     ribbon.scale.setScalar(.9)
     ribbon.position.set(-.08,.02,0)
-    // Nest the smaller volumes inside the ribbon, sharing its centre of mass.
-    // Put the glass ring on the centerline and give each accent its own quadrant.
-    // Alternating depth keeps them distributed when the assembly turns in space.
-    const ring=mesh(new THREE.TorusGeometry(.64,.14,32,128),glass,0,0,.32)
+    // Keep every accent clear of the swept ribbon. The ornaments sit around a
+    // smaller central ring in alternating depth planes, so perspective adds
+    // depth while the four quadrants stay balanced as the assembly turns.
+    const ring=mesh(new THREE.TorusGeometry(.48,.11,32,128),glass,0,0,.32)
     ring.rotation.set(.25,.35,-.32)
-    const satellite=mesh(new THREE.TorusGeometry(.29,.06,24,96),chrome,-.92,-.82,.42)
+    const satellite=mesh(new THREE.TorusGeometry(.29,.06,24,96),chrome,-.4,-.38,-1)
     satellite.rotation.set(.7,-.45,.16)
-    mesh(new THREE.SphereGeometry(.39,48,32),cream,-.92,.68,-.42)
-    const block=mesh(new RoundedBoxGeometry(.5,.5,.5,5,.09),orange,.92,-.62,-.42)
+    mesh(new THREE.SphereGeometry(.39,48,32),cream,-.4,.38,1)
+    const block=mesh(new RoundedBoxGeometry(.5,.5,.5,5,.09),orange,.4,-.38,1)
     block.rotation.set(.2,.36,.24)
-    const bead=mesh(new THREE.SphereGeometry(.14,24,16),chrome,.92,.68,.42)
+    const bead=mesh(new THREE.SphereGeometry(.14,24,16),chrome,.4,.38,-1)
     bead.name='counterweight'
     let dragging=false, pointer=-1, x=0,y=0, velocity=0,lastMove=0, visible=true
     const activePointers=new Map<number,{x:number;y:number}>()
