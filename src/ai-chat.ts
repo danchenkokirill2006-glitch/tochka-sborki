@@ -1,5 +1,6 @@
 import './ai-chat.css'
 import { uiIcon } from './ui-icons'
+import { getConsentChoice } from './consent'
 type Message = { role: 'user' | 'assistant'; content: string }
 const storageKey = 'tochka-ai-chat-v1'
 const spark = uiIcon('sparkles')
@@ -8,8 +9,10 @@ export function mountAiChat() {
   if (document.querySelector('.ai-chat')) return
   let messages: Message[] = []
   try {
-    const saved: unknown = JSON.parse(sessionStorage.getItem(storageKey) || '[]')
-    if (Array.isArray(saved)) messages = saved.filter(m => m && ['user', 'assistant'].includes(m.role) && typeof m.content === 'string').slice(-30).map(m => ({ role: m.role, content: m.content.slice(0, 4000) }))
+    if (getConsentChoice() === 'accepted') {
+      const saved: unknown = JSON.parse(sessionStorage.getItem(storageKey) || '[]')
+      if (Array.isArray(saved)) messages = saved.filter(m => m && ['user', 'assistant'].includes(m.role) && typeof m.content === 'string').slice(-30).map(m => ({ role: m.role, content: m.content.slice(0, 4000) }))
+    }
   } catch { /* Chat works when browser storage is unavailable. */ }
   let busy = false, open = false, remaining: number | null = null, cooldownUntil = 0
   let controller: AbortController | undefined
@@ -34,7 +37,7 @@ export function mountAiChat() {
   const status = root.querySelector<HTMLElement>('.ai-chat-status')!
   const quota = root.querySelector<HTMLElement>('[data-chat-quota]')!
   const count = root.querySelector<HTMLElement>('[data-chat-count]')!
-  function save() { try { sessionStorage.setItem(storageKey, JSON.stringify(messages.slice(-30))) } catch { /* Optional persistence. */ } }
+  function save() { if (getConsentChoice() !== 'accepted') return; try { sessionStorage.setItem(storageKey, JSON.stringify(messages.slice(-30))) } catch { /* Optional persistence. */ } }
   function update() {
     send.disabled = !busy && (!input.value.trim() || remaining === 0 || Date.now() < cooldownUntil)
     send.setAttribute('aria-label', busy ? 'Остановить ответ' : 'Отправить вопрос')

@@ -7,6 +7,8 @@ import { toBlob } from 'html-to-image'
 import { evaluateProject, projects, starterFor, exerciseSpecs, ASSIGNMENT_VERSION, type Evaluation } from './assignments'
 import { allTaskMaterialSources, materialFor, taskMaterials, type TaskMaterial } from './task-assets'
 import { UI_ICON_SVGS, uiIcon } from './ui-icons'
+import { getConsentChoice, mountConsent, openConsentSettings, type ConsentChoice } from './consent'
+import { legalDocuments, type LegalPage } from './legal'
 
 const LOGO_SIGN_SRC = new URL('./assets/logo-sign-color.png', import.meta.url).href
 
@@ -167,6 +169,11 @@ const tasks: Task[] = [
 ]
 
 let screen: Screen = 'home'
+const legalFromHash = (): LegalPage | null => {
+  const value = window.location.hash.replace(/^#\//, '')
+  return value in legalDocuments ? value as LegalPage : null
+}
+let legalPage: LegalPage | null = legalFromHash()
 let selectedTask = tasks[0]
 let mobileEditorView: 'canvas' | 'add' | 'properties' | 'layers' = 'canvas'
 let briefOpen = true
@@ -189,7 +196,7 @@ let historyIndex = -1
 let toastTimer: number | undefined
 let draftSaveTimer: number | undefined
 let historyCommitTimer: number | undefined
-let draftSaveStatus: 'saved' | 'saving' | 'error' = 'saved'
+let draftSaveStatus: 'saved' | 'saving' | 'session' | 'error' = getConsentChoice() === 'accepted' ? 'saved' : 'session'
 let storageErrorNotified = false
 const USERS_STORAGE_KEY = 'tochka-sborki:users:v1'
 const CURRENT_USER_KEY = 'tochka-sborki:current-user:v1'
@@ -227,10 +234,12 @@ const PROFILE_IMAGE_MAX_BYTES = 8_000_000
 const PROFILE_IMAGE_MAX_DATA = 2_500_000
 
 function safeStorageGet(key: string) {
+  if (getConsentChoice() === 'essential') return null
   try { return window.localStorage.getItem(key) } catch { return null }
 }
 
 function safeStorageSet(key: string, value: string) {
+  if (getConsentChoice() !== 'accepted') return false
   try { window.localStorage.setItem(key, value); return true } catch { return false }
 }
 
@@ -333,7 +342,7 @@ function loadUserBase() {
   if (savedTheme === 'light' || savedTheme === 'dark') legacyTheme = savedTheme
   legacySubscription = safeStorageGet(LEGACY_SUBSCRIPTION_STORAGE_KEY) === 'active'
   const account = createUser({
-    profile: cleanProfile({ name: 'Кирилл', role: 'Дизайнер в процессе', photo: '', ...legacyProfile }, 'Кирилл'),
+    profile: cleanProfile({ name: 'Гость', role: 'Дизайнер в процессе', photo: '', ...legacyProfile }, 'Гость'),
     theme: legacyTheme,
     subscriptionActive: legacySubscription,
   })
@@ -364,7 +373,7 @@ const app = document.querySelector<HTMLDivElement>('#app')!
 
 function showRuntimeFallback() {
   const root = app || document.body
-  root.innerHTML = `<main class="fatal-state" role="alert"><span class="card-kicker">ТОЧКА СБОРКИ</span><h1>Не получилось открыть экран</h1><p>Ваши сохранённые макеты остаются в браузере. Обновите страницу и попробуйте ещё раз.</p><button type="button" class="primary-button" data-reload>Обновить страницу</button></main>`
+  root.innerHTML = `<main class="fatal-state" role="alert"><span class="card-kicker">ТОЧКА СБОРКИ</span><h1>Не получилось открыть экран</h1><p>${getConsentChoice() === 'accepted' ? 'Сохранённые макеты остаются в браузере.' : 'Несохранённые изменения могут потеряться.'} Обновите страницу и попробуйте ещё раз.</p><button type="button" class="primary-button" data-reload>Обновить страницу</button></main>`
 }
 
 window.addEventListener('error', () => showRuntimeFallback())
@@ -432,7 +441,7 @@ function normalizeEditorObject(value: unknown, index: number): EditorObject | nu
 function updateDraftStatus() {
   const status = app?.querySelector<HTMLElement>('[data-save-status]')
   if (!status) return
-  const labels = { saved: 'СОХРАНЕНО', saving: 'СОХРАНЯЕМ…', error: 'НЕ СОХРАНЕНО' }
+  const labels = { saved: 'СОХРАНЕНО', saving: 'СОХРАНЯЕМ…', session: 'ТОЛЬКО В ЭТОМ СЕАНСЕ', error: 'НЕ СОХРАНЕНО' }
   const label = status.querySelector<HTMLElement>('[data-save-label]')
   if (label) label.textContent = labels[draftSaveStatus]
   status.dataset.state = draftSaveStatus
@@ -448,6 +457,11 @@ function hasDraft(taskId: string) {
 
 function saveDraft() {
   window.clearTimeout(draftSaveTimer)
+  if (getConsentChoice() !== 'accepted') {
+    draftSaveStatus = 'session'
+    updateDraftStatus()
+    return
+  }
   const saved = safeStorageSet(draftKey(), JSON.stringify({version:2, assignmentVersion:ASSIGNMENT_VERSION, objects, background:posterBackground, updatedAt:Date.now()}))
   draftSaveStatus = saved ? 'saved' : 'error'
   updateDraftStatus()
@@ -458,6 +472,7 @@ function saveDraft() {
 }
 
 function scheduleDraftSave() {
+  if (getConsentChoice() !== 'accepted') { draftSaveStatus = 'session'; updateDraftStatus(); return }
   draftSaveStatus = 'saving'
   updateDraftStatus()
   window.clearTimeout(draftSaveTimer)
@@ -802,7 +817,8 @@ function openTask(task: Task) {
 
 function render() {
   disposeHero?.(); disposeHero = undefined
-  document.body.classList.toggle('editor-open', screen === 'editor')
+  const isEditor = screen === 'editor' && !legalPage
+  document.body.classList.toggle('editor-open', isEditor)
   const generation = ++heroGeneration
   workspaceObserver?.disconnect()
   const views: Record<Exclude<Screen, 'editor'>, () => string> = {
@@ -813,21 +829,23 @@ function render() {
     progress: renderProgress,
     profile: renderProfile,
   }
-  app.innerHTML = screen === 'editor' ? renderEditor() : views[screen]()
+  app.innerHTML = legalPage ? renderLegalPage(legalPage) : screen === 'editor' ? renderEditor() : views[screen]()
   const main = app.querySelector('main')
   if (main) main.id = 'main-content'
+  if (main && !isEditor) main.insertAdjacentHTML('beforeend', renderSiteFooter())
+  document.title = legalPage ? `${legalDocuments[legalPage].title} — Точка сборки` : 'Точка сборки — обучение графическому дизайну'
   bindEvents()
   const heroHost = app.querySelector<HTMLElement>('[data-hero-scene]')
   if (heroHost) void import('./hero3d').then(({mountHeroScene}) => {
     if (generation === heroGeneration && heroHost.isConnected) disposeHero = mountHeroScene(heroHost)
   }).catch(() => { /* Static fallback remains visible. */ })
-  if (screen === 'editor') fitTextBoxes()
+  if (isEditor) fitTextBoxes()
   requestAnimationFrame(() => {
     app.querySelectorAll('.reveal').forEach((el) => el.classList.add('is-visible'))
   })
 }
 
-function renderNav(active: Exclude<Screen, 'editor'>) {
+function renderNav(active: Exclude<Screen, 'editor'> | null) {
   const items: Array<[Exclude<Screen, 'editor'>, string, string, keyof typeof UI_ICON_SVGS]> = [
     ['home', 'Главная', 'Главная', 'home'],
     ['courses', 'Курсы', 'Курсы', 'courses'],
@@ -838,15 +856,19 @@ function renderNav(active: Exclude<Screen, 'editor'>) {
   return `<nav class="main-nav" aria-label="Основная навигация">${items.map(([id, label, shortLabel, icon]) => `<button class="nav-item ${active === id ? 'active' : ''}" data-screen="${id}" aria-label="${label}" ${active === id ? 'aria-current="page"' : ''}><span class="nav-icon" aria-hidden="true">${uiIcon(icon)}</span><span class="nav-label">${label}</span><span class="nav-short" aria-hidden="true">${shortLabel}</span></button>`).join('')}<button class="nav-item nav-chat-trigger" type="button" data-open-ai-chat aria-label="Открыть чат с ИИ"><span class="nav-icon" aria-hidden="true">${uiIcon('sparkles')}</span><span class="nav-label">Чат с ИИ</span><span class="nav-short" aria-hidden="true">Чат</span></button></nav>`
 }
 
-function renderPageHeader(kicker: string, title: string, description: string, active: Exclude<Screen, 'editor'>) {
+function renderSiteHeader(active: Exclude<Screen, 'editor'> | null) {
   return `
     <header class="topbar">
       <button class="brand" data-screen="home" aria-label="На главную">
         <span class="brand-logo" aria-hidden="true"><img src="${LOGO_SIGN_SRC}" alt="" width="38" height="38"></span><span class="brand-wordmark">Точка сборки</span>
       </button>
       ${renderNav(active)}
-      <div class="topbar-right"><button class="subscription-button" data-action="subscription"><span>PRO</span> Подписка</button><button class="theme-toggle" data-action="theme" aria-label="Включить ${theme === 'light' ? 'тёмную' : 'светлую'} тему"><span class="theme-icon" aria-hidden="true">${uiIcon(theme === 'light' ? 'sun' : 'moon')}</span><span class="theme-label">${theme === 'light' ? 'Тёмная' : 'Светлая'}</span></button><button class="avatar avatar-button" data-screen="profile" aria-label="Личный кабинет">${profile.photo ? `<img src="${profile.photo}" alt="">` : escapeHtml(profile.name.trim().slice(0,1).toLocaleUpperCase('ru') || 'К')}</button></div>
-    </header>
+      <div class="topbar-right"><button class="subscription-button" data-action="subscription"><span>PRO</span> Подписка</button><button class="theme-toggle" data-action="theme" aria-label="Включить ${theme === 'light' ? 'тёмную' : 'светлую'} тему"><span class="theme-icon" aria-hidden="true">${uiIcon(theme === 'light' ? 'sun' : 'moon')}</span><span class="theme-label">${theme === 'light' ? 'Тёмная' : 'Светлая'}</span></button><button class="avatar avatar-button" data-screen="profile" aria-label="Личный кабинет">${profile.photo ? `<img src="${profile.photo}" alt="">` : escapeHtml(profile.name.trim().slice(0,1).toLocaleUpperCase('ru') || 'Г')}</button></div>
+    </header>`
+}
+
+function renderPageHeader(kicker: string, title: string, description: string, active: Exclude<Screen, 'editor'>) {
+  return `${renderSiteHeader(active)}
     <div class="content-heading reveal">
       <div><div class="eyebrow"><span>${kicker}</span> ОБУЧАЮЩАЯ СРЕДА</div><h1>${title}</h1><p>${description}</p></div>
     </div>`
@@ -855,13 +877,7 @@ function renderPageHeader(kicker: string, title: string, description: string, ac
 function renderHome() {
   return `
     <main class="shell home-shell">
-      <header class="topbar">
-        <button class="brand" data-screen="home" aria-label="На главную">
-          <span class="brand-logo" aria-hidden="true"><img src="${LOGO_SIGN_SRC}" alt="" width="38" height="38"></span><span class="brand-wordmark">Точка сборки</span>
-        </button>
-        ${renderNav('home')}
-        <div class="topbar-right"><button class="subscription-button" data-action="subscription"><span>PRO</span> Подписка</button><button class="theme-toggle" data-action="theme" aria-label="Включить ${theme === 'light' ? 'тёмную' : 'светлую'} тему"><span class="theme-icon" aria-hidden="true">${uiIcon(theme === 'light' ? 'sun' : 'moon')}</span><span class="theme-label">${theme === 'light' ? 'Тёмная' : 'Светлая'}</span></button><button class="avatar avatar-button" data-screen="profile" aria-label="Личный кабинет">${profile.photo ? `<img src="${profile.photo}" alt="">` : escapeHtml(profile.name.trim().slice(0,1).toLocaleUpperCase('ru') || 'К')}</button></div>
-      </header>
+      ${renderSiteHeader('home')}
 
       <section class="hero">
         <div class="hero-copy reveal">
@@ -912,13 +928,37 @@ function renderHome() {
         </div>
       </section>
 
-      <footer class="home-footer">
-        <span>ТОЧКА СБОРКИ / v0.2</span>
-        <span>DESIGN EDUCATION SYSTEM</span>
-        <span>2026</span>
-      </footer>
     </main>
   `
+}
+
+function renderSiteFooter() {
+  const links: LegalPage[] = ['privacy', 'cookies', 'terms', 'offer']
+  return `<footer class="site-footer">
+    <div class="site-footer-inner">
+      <div class="site-footer-brand"><span class="site-footer-mark" aria-hidden="true"><img src="${LOGO_SIGN_SRC}" alt="" width="34" height="34"></span><div><strong>Точка сборки</strong><span>Учись видеть. Создавай.</span></div></div>
+      <nav class="site-footer-links" aria-label="Документы">${links.map(page => `<a href="#/${page}" data-legal="${page}" ${legalPage === page ? 'aria-current="page"' : ''}>${legalDocuments[page].label}</a>`).join('')}<button type="button" data-consent-settings>Настроить cookies</button></nav>
+      <div class="site-footer-bottom"><span>Учебная среда для практики графического дизайна</span><span>© ${new Date().getFullYear()} Точка сборки</span></div>
+    </div>
+  </footer>`
+}
+
+function renderLegalPage(page: LegalPage) {
+  const document = legalDocuments[page]
+  const links: LegalPage[] = ['privacy', 'cookies', 'terms', 'offer']
+  return `<main class="shell inner-shell legal-shell">
+    ${renderSiteHeader(null)}
+    <section class="legal-hero reveal">
+      <div class="eyebrow"><span>ИНФОРМАЦИЯ</span> О ПРОЕКТЕ</div>
+      <h1>${escapeHtml(document.title)}</h1>
+      <p>${escapeHtml(document.lead)}</p>
+      <span class="legal-status">${escapeHtml(document.status)}</span>
+    </section>
+    <div class="legal-layout">
+      <aside class="legal-index"><span>ДОКУМЕНТЫ</span><nav aria-label="Разделы документов">${links.map(item => `<a href="#/${item}" data-legal="${item}" ${item === page ? 'aria-current="page"' : ''}>${legalDocuments[item].label}${uiIcon('forward')}</a>`).join('')}</nav></aside>
+      <article class="legal-content" aria-label="${escapeHtml(document.title)}">${document.sections.map(section => `<section class="legal-section"><h2>${escapeHtml(section.title)}</h2>${section.paragraphs?.map(paragraph => `<p>${escapeHtml(paragraph)}</p>`).join('') ?? ''}${section.points ? `<ul>${section.points.map(point => `<li>${escapeHtml(point)}</li>`).join('')}</ul>` : ''}</section>`).join('')}</article>
+    </div>
+  </main>`
 }
 
 
@@ -990,7 +1030,7 @@ function renderProfile() {
     <section class="profile-layout reveal">
       <article class="profile-hero-card">
         <div class="profile-photo-wrap">
-          <div class="profile-photo" data-profile-photo>${profile.photo ? `<img src="${profile.photo}" alt="Фото профиля">` : `<span>${escapeHtml(profile.name.trim().slice(0,1).toLocaleUpperCase('ru') || 'К')}</span>`}</div>
+          <div class="profile-photo" data-profile-photo>${profile.photo ? `<img src="${profile.photo}" alt="Фото профиля">` : `<span>${escapeHtml(profile.name.trim().slice(0,1).toLocaleUpperCase('ru') || 'Г')}</span>`}</div>
           <label class="profile-upload"><input type="file" data-profile-file accept="image/png,image/jpeg,image/webp"><span>ЗАГРУЗИТЬ ФОТО</span></label>
         </div>
         <div class="profile-main">
@@ -1003,12 +1043,13 @@ function renderProfile() {
       <aside class="profile-settings">
         <div class="card-kicker">НАСТРОЙКИ</div>
         <h2>Светлая тема</h2>
-        <p>Интерфейс переключается между светлой и тёмной темой. Выбранное состояние сохраняется.</p>
+        <p>Интерфейс переключается между светлой и тёмной темой.${getConsentChoice() === 'accepted' ? ' Выбор сохраняется в браузере.' : ' Сейчас выбор действует до обновления страницы.'}</p>
         <button class="theme-preview-button" data-action="theme"><span class="theme-preview-icon">${uiIcon(theme === 'light' ? 'sun' : 'moon')}</span><strong>${theme === 'light' ? 'Сейчас включена светлая' : 'Сейчас включена тёмная'}</strong><span class="theme-preview-change">СМЕНИТЬ ${uiIcon('forward')}</span></button>
         <div class="subscription-card ${subscriptionActive ? 'active' : ''}">
           <div><div class="card-kicker">ДОСТУП</div><h3>${subscriptionActive ? 'PRO активна' : 'Базовый доступ'}</h3><p>Все задания, редактор, сохранение плакатов и проверка по критериям доступны бесплатно. PRO пока демонстрационный режим.</p></div>
           <button class="outline-button" data-action="subscription">${subscriptionActive ? 'УПРАВЛЕНИЕ' : 'ПОДКЛЮЧИТЬ PRO'} <span>${uiIcon('forward')}</span></button>
         </div>
+        <div class="profile-storage-row"><div><strong>Сохранение на устройстве</strong><p>${getConsentChoice() === 'accepted' ? 'Прогресс, черновики и настройки сохраняются в этом браузере.' : 'Изменения доступны только до обновления страницы.'}</p></div><button class="outline-button" data-consent-settings>НАСТРОИТЬ ${uiIcon('forward')}</button></div>
         <div class="profile-account-row"><div><span>ID АККАУНТА</span><code>${currentUserId}</code></div><button class="outline-button" data-action="new-user">НОВЫЙ ПОЛЬЗОВАТЕЛЬ <span>${uiIcon('add')}</span></button></div>
         <div class="profile-stat-grid">
           <div><span>МОДУЛИ</span><strong>${tasks.length}</strong></div>
@@ -1624,7 +1665,7 @@ document.addEventListener('keydown', event => {
     } else { const item=selectedObject();if(item) {objectClipboard={...item};if(event.code==='KeyX') deleteSelected()} }
     return
   }
-  if(command && event.code === 'KeyS') {event.preventDefault();saveDraft();notify('Макет сохранён');return}
+  if(command && event.code === 'KeyS') {event.preventDefault();saveDraft();notify(getConsentChoice() === 'accepted' ? 'Макет сохранён' : 'Макет изменён только в этой вкладке');return}
   if(command && event.code === 'KeyE') {event.preventDefault();void exportPoster();return}
   if(command && ['Equal','Minus','Digit0','Digit1'].includes(event.code)) {event.preventDefault();if(event.code==='Digit0')fitWorkspace();else zoomWorkspace(event.code==='Digit1'?1/viewScale:event.code==='Equal'?1.2:1/1.2);return}
   if(command && ['BracketLeft','BracketRight'].includes(event.code)) {
@@ -1654,7 +1695,7 @@ document.addEventListener('keyup', event => { if (event.code === 'Space') { spac
 window.addEventListener('blur', () => { spaceHeld = false; updateWorkspace() })
 
 function bindEvents() {
-  if (screen === 'editor') bindWorkspace()
+  if (screen === 'editor' && !legalPage) bindWorkspace()
   app.querySelectorAll<HTMLButtonElement>('.mobile-editor-tabs [data-mobile-view]').forEach((button) => {
     button.addEventListener('click', () => {
       const view = button.dataset.mobileView as typeof mobileEditorView | undefined
@@ -1673,11 +1714,31 @@ function bindEvents() {
       const target = element.dataset.screen as Exclude<Screen, 'editor'> | undefined
       if (!target) return
       if (screen === 'editor') saveDraft()
+      if (legalPage) {
+        legalPage = null
+        window.history.pushState(null, '', window.location.pathname + window.location.search)
+      }
       screen = target
       selectedId = null
       render()
+      window.scrollTo(0, 0)
     })
   })
+
+  app.querySelectorAll<HTMLAnchorElement>('[data-legal]').forEach(link => {
+    link.addEventListener('click', event => {
+      const page = link.dataset.legal as LegalPage | undefined
+      if (!page || !(page in legalDocuments)) return
+      event.preventDefault()
+      if (screen === 'editor') saveDraft()
+      legalPage = page
+      screen = 'home'
+      window.history.pushState(null, '', `#/${page}`)
+      render()
+      window.scrollTo(0, 0)
+    })
+  })
+  app.querySelectorAll('[data-consent-settings]').forEach(button => button.addEventListener('click', openConsentSettings))
 
   app.querySelectorAll<HTMLElement>('[data-action]').forEach((element) => {
     element.addEventListener('click', () => {
@@ -1740,7 +1801,7 @@ function bindEvents() {
         profile.role = (role || 'Дизайнер в процессе').slice(0, 80)
         const saved = saveProfile()
         render()
-        notify(saved ? 'Профиль сохранён' : 'Профиль изменён, но браузер не смог его сохранить')
+        notify(saved ? 'Профиль сохранён' : getConsentChoice() !== 'accepted' ? 'Профиль изменён только на время этого сеанса. Сохранение можно включить в настройках cookies' : 'Профиль изменён, но браузер не смог его сохранить')
       }
     })
   })
@@ -1775,7 +1836,7 @@ function bindEvents() {
         const avatarImage = image.cloneNode(true) as HTMLImageElement
         avatarImage.alt = ''
         document.querySelector<HTMLElement>('.avatar-button')?.replaceChildren(avatarImage)
-        notify(saved ? 'Фото профиля обновлено' : 'Фото обновлено, но браузер не смог сохранить профиль')
+        notify(saved ? 'Фото профиля обновлено' : getConsentChoice() !== 'accepted' ? 'Фото обновлено только на время этого сеанса' : 'Фото обновлено, но браузер не смог сохранить профиль')
       }).catch(() => notify('Не удалось открыть изображение профиля')).finally(() => { input.value = '' })
     })
   })
@@ -2487,7 +2548,7 @@ function showCheckModal(result:Evaluation,previewUrl:string,aiReview:AiReview|nu
     <header class="result-head"><div><div class="modal-kicker">ЗАДАНИЕ ${selectedTask.number} · ${escapeHtml(selectedTask.title.toUpperCase())}</div><h2>${result.passed?'Задание выполнено.':result.unchanged?'Это исходный макет.':'Задание пока не зачтено.'}</h2></div><button class="modal-close" data-close aria-label="Закрыть">${uiIcon('close')}</button></header>
     <div class="result-grid">
       <div class="result-poster-wrap">${previewUrl?`<img class="result-poster" src="${previewUrl}" alt="Предпросмотр готового макета">`:`<div class="result-poster-fallback">Предпросмотр макета недоступен</div>`}<a class="result-download" ${previewUrl?`href="${previewUrl}" download="tochka-sborki-${selectedTask.id}.png"`:'aria-disabled="true"'}>Скачать макет PNG ${uiIcon('forward')}</a></div>
-      <div class="result-report"><div class="result-score-line"><div class="score-ring"><span>${result.unchanged?'—':result.score}</span><small>/100</small></div><div><div class="result-status ${result.passed?'is-pass':''}">${result.passed?'ЗАДАНИЕ ЗАЧТЕНО':'НЕ ЗАЧТЕНО'}</div><p>${result.passed?'Результат сохранён в прогрессе.':'В прогресс не засчитано. Выполните условия ниже и проверьте снова.'}</p></div></div>
+      <div class="result-report"><div class="result-score-line"><div class="score-ring"><span>${result.unchanged?'—':result.score}</span><small>/100</small></div><div><div class="result-status ${result.passed?'is-pass':''}">${result.passed?'ЗАДАНИЕ ЗАЧТЕНО':'НЕ ЗАЧТЕНО'}</div><p>${result.passed ? getConsentChoice() === 'accepted' ? 'Результат сохранён в прогрессе.' : 'Результат виден в этой вкладке. Разрешите сохранение, чтобы не потерять его.' : 'В прогресс не засчитано. Выполните условия ниже и проверьте снова.'}</p></div></div>
         ${!result.passed?`<div class="submission-blockers"><strong>Что мешает зачёту</strong><ul>${result.blockers.map(item=>`<li>${escapeHtml(item)}</li>`).join('')}</ul><p>${result.unchanged?'Исходник не получает итоговую оценку. Критерии ниже показывают, что предстоит сделать.':'Баллы показывают состояние макета. Пока обязательные условия не выполнены, итог ограничен 69 баллами.'}</p></div>`:''}
         <section class="result-section"><div class="result-section-title">ПРОВЕРКА УСЛОВИЙ ЗАДАНИЯ</div><div class="analysis-list">${result.items.map(item=>`<div class="analysis-row ${item.points===20?'good':'warn'}">${uiIcon(item.points===20?'check':'warning')}<strong>${escapeHtml(item.label)}</strong><b>${item.points}/20</b><small>${escapeHtml(item.detail)}</small></div>`).join('')}</div></section>
         <section class="result-section result-feedback"><div class="result-section-title"><span>${aiLabel}</span><span class="ai-spark">${uiIcon('sparkles')}</span></div>${aiReview?`<p class="ai-summary">${escapeHtml(aiReview.summary)}</p>`:`<p class="ai-status-note">${escapeHtml(aiNote)}</p>`}${strengths.length?`<div class="feedback-strengths"><b>Что уже работает</b>${strengths.slice(0,3).map(item=>`<span>${uiIcon('check')}${escapeHtml(item)}</span>`).join('')}</div>`:''}<div class="feedback-recommendations"><b>Следующие улучшения</b>${recommendations.slice(0,5).map((item,index)=>`<div><i>${String(index+1).padStart(2,'0')}</i><span>${escapeHtml(item)}</span></div>`).join('')}</div></section>
@@ -2506,8 +2567,33 @@ function showCheckModal(result:Evaluation,previewUrl:string,aiReview:AiReview|nu
   })
 }
 
+function syncLegalRoute() {
+  if (window.location.hash && !window.location.hash.startsWith('#/')) return
+  const next = legalFromHash()
+  if (next === legalPage) return
+  if (screen === 'editor') saveDraft()
+  legalPage = next
+  if (next) screen = 'home'
+  render()
+  window.scrollTo(0, 0)
+}
+
+function handleConsentChange(next: ConsentChoice) {
+  if (next === 'accepted') {
+    saveUserBase()
+    if (screen === 'editor') saveDraft()
+  } else {
+    draftSaveStatus = 'session'
+    updateDraftStatus()
+  }
+  render()
+}
+
+window.addEventListener('hashchange', syncLegalRoute)
+window.addEventListener('popstate', syncLegalRoute)
 injectIconOverrides()
 render()
 mountAiChat()
+mountConsent(handleConsentChange)
 
 
