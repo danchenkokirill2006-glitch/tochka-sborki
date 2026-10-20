@@ -56,7 +56,10 @@ export function mountHeroScene(host: HTMLElement): () => void {
     ribbonShape.moveTo(-.42,-.055); ribbonShape.lineTo(.42,-.055)
     ribbonShape.quadraticCurveTo(.46,0,.42,.055); ribbonShape.lineTo(-.42,.055)
     ribbonShape.quadraticCurveTo(-.46,0,-.42,-.055)
-    const points=Array.from({length:97},(_,i)=>{
+    // Closed Catmull-Rom curves wrap their control points automatically. Do not
+    // repeat the first point at the end: that creates a zero-length segment and
+    // an extrusion-frame discontinuity that shows up as a diagonal seam.
+    const points=Array.from({length:96},(_,i)=>{
       const t=i/96*Math.PI*2
       return new THREE.Vector3(1.4*Math.cos(t),1.75*Math.sin(t),-.12+.35*Math.sin(2*t))
     })
