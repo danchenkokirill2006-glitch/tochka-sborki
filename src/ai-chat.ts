@@ -1,8 +1,8 @@
 import './ai-chat.css'
+import { uiIcon } from './ui-icons'
 type Message = { role: 'user' | 'assistant'; content: string }
 const storageKey = 'tochka-ai-chat-v1'
-const icon = (path: string) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`
-const spark = icon('<path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z"/>')
+const spark = uiIcon('sparkles')
 
 export function mountAiChat() {
   if (document.querySelector('.ai-chat')) return
@@ -16,10 +16,10 @@ export function mountAiChat() {
   const root = document.createElement('div')
   root.className = 'ai-chat'
   root.innerHTML = `<section class="ai-chat-panel" id="ai-chat-panel" role="dialog" aria-label="ИИ-наставник" hidden>
-    <header class="ai-chat-head"><span class="ai-chat-mark">${spark}</span><div><strong>ИИ-наставник</strong><span>Помощь с дизайном</span></div><button type="button" data-chat-clear title="Очистить переписку" aria-label="Очистить переписку">${icon('<path d="M3 12a9 9 0 1 0 3-6.7M3 3v5h5"/>')}</button><button type="button" data-chat-close aria-label="Закрыть чат">${icon('<path d="m6 6 12 12M18 6 6 18"/>')}</button></header>
+    <header class="ai-chat-head"><span class="ai-chat-mark">${spark}</span><div><strong>ИИ-наставник</strong><span>Помощь с дизайном</span></div><button type="button" data-chat-clear title="Очистить переписку" aria-label="Очистить переписку">${uiIcon('refresh')}</button><button type="button" data-chat-close aria-label="Закрыть чат">${uiIcon('close')}</button></header>
     <div class="ai-chat-scroll"><div class="ai-chat-welcome"><span class="ai-chat-orbit">${spark}</span><h2>Соберём мысль<br>в хорошую идею.</h2><p>Разберём цвет, композицию или следующий шаг в задании.</p><div class="ai-chat-prompts"><button type="button">Как выбрать цвета для афиши?</button><button type="button">Как выделить главное в макете?</button><button type="button">С чего начать задание?</button></div></div><div class="ai-chat-messages" role="log" aria-label="Переписка" aria-live="polite" aria-relevant="additions"></div></div>
     <div class="ai-chat-status" role="status" aria-live="polite"></div>
-    <form class="ai-chat-form"><label class="ai-chat-sr" for="ai-chat-input">Ваш вопрос о дизайне</label><div class="ai-chat-compose"><textarea id="ai-chat-input" rows="2" maxlength="800" placeholder="Спросите о дизайне…" aria-describedby="ai-chat-help"></textarea><button type="submit" aria-label="Отправить вопрос">${icon('<path d="M12 19V5m-6 6 6-6 6 6"/>')}</button></div><div class="ai-chat-meta"><span data-chat-quota>20 вопросов в день</span><span data-chat-count>0 / 800</span></div><p id="ai-chat-help">Для разбора макета нажмите «Проверить» в редакторе. Вопросы обрабатывает Cloudflare AI.</p></form>
+    <form class="ai-chat-form"><label class="ai-chat-sr" for="ai-chat-input">Ваш вопрос о дизайне</label><div class="ai-chat-compose"><textarea id="ai-chat-input" rows="2" maxlength="800" placeholder="Спросите о дизайне…" aria-describedby="ai-chat-help"></textarea><button type="submit" aria-label="Отправить вопрос">${uiIcon('send')}</button></div><div class="ai-chat-meta"><span data-chat-quota>20 вопросов в день</span><span data-chat-count>0 / 800</span></div><p id="ai-chat-help">Для разбора макета нажмите «Проверить» в редакторе. Вопросы обрабатывает Cloudflare AI.</p></form>
   </section><button class="ai-chat-launcher" type="button" aria-label="Открыть чат с ИИ" aria-expanded="false" aria-controls="ai-chat-panel">${spark}<span>Спросить ИИ</span></button>`
   document.body.append(root)
   const panel = root.querySelector<HTMLElement>('.ai-chat-panel')!
@@ -38,7 +38,7 @@ export function mountAiChat() {
   function update() {
     send.disabled = !busy && (!input.value.trim() || remaining === 0 || Date.now() < cooldownUntil)
     send.setAttribute('aria-label', busy ? 'Остановить ответ' : 'Отправить вопрос')
-    send.innerHTML = busy ? icon('<rect x="7" y="7" width="10" height="10" rx="2"/>') : icon('<path d="M12 19V5m-6 6 6-6 6 6"/>')
+    send.innerHTML = busy ? uiIcon('stop') : uiIcon('send')
     clear.disabled = busy || !messages.length
     count.textContent = `${input.value.length} / 800`
     const seconds = Math.ceil((cooldownUntil - Date.now()) / 1000)
