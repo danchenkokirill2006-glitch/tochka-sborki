@@ -49,5 +49,6 @@ html[data-theme="light"] .ai-chat-status.is-error{color:#986020}
 html[data-theme="light"] .ai-chat-mark,html[data-theme="light"] .ai-chat-orbit{color:#7652ce}
 @keyframes chat-appear{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
 @media(max-width:600px){.ai-chat{right:12px;bottom:max(12px,env(safe-area-inset-bottom));left:12px}.ai-chat-panel{width:100%;height:min(600px,calc(100dvh - 92px));border-radius:20px}.ai-chat-launcher{height:48px;padding:0 15px}.ai-chat-compose textarea{font-size:16px}.ai-chat-head{padding:12px 14px}.ai-chat-scroll{padding:16px}.ai-chat-form{padding:10px 12px}.ai-chat-welcome{padding:0}.ai-chat-welcome h2{font-size:23px}}
+@media(max-width:760px){.ai-chat{pointer-events:none;bottom:calc(78px + env(safe-area-inset-bottom))!important}.ai-chat-panel{pointer-events:auto}.ai-chat-launcher{pointer-events:auto;display:none!important}body.editor-open .ai-chat{bottom:12px!important}.ai-chat-head button{width:44px;height:44px}.ai-chat-prompts button{min-height:44px}.ai-chat-compose button{width:44px;height:44px}}
 @media(prefers-reduced-motion:reduce){.ai-chat-panel{animation:none}.ai-chat button:active:not(:disabled){transform:none}}
 @media(prefers-contrast:more){.ai-chat-panel,.ai-chat-compose,.ai-chat-prompts button{border-color:currentColor}.ai-chat{--chat-muted:var(--chat-ink)}}

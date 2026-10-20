@@ -168,6 +168,7 @@ const tasks: Task[] = [
 
 let screen: Screen = 'home'
 let selectedTask = tasks[0]
+let mobileEditorView: 'canvas' | 'add' | 'properties' | 'layers' = 'canvas'
 let briefOpen = true
 let selectedId: string | null = null
 let showGrid = false
@@ -692,6 +693,7 @@ function addObject(type: EditorObject['type']) {
 
   objects.push(object)
   selectedId = object.id
+  mobileEditorView = 'canvas'
   saveHistory()
   render()
   notify(`${object.name} добавлен`)
@@ -709,7 +711,7 @@ function insertMaterial(material:TaskMaterial,dropX?:number,dropY?:number) {
     x=place.x;y=place.y
   }
   const object:EditorObject={id:`material-${material.id}-${Date.now()}`,type:'photo',name:material.name,x,y,width,height,rotation:0,opacity:1,background:material.kind==='photo'?'#e6e2da':'transparent',radius:material.radius??0,imageSrc:material.src,fit:material.fit,imagePosition:'center',assetId:material.id,materialKind:material.kind}
-  objects.push(object);selectedId=object.id;saveHistory();render();notify(`${material.name} добавлен на макет`)
+  objects.push(object);selectedId=object.id;mobileEditorView='canvas';saveHistory();render();notify(`${material.name} добавлен на макет`)
 }
 
 function addBriefCopy(index:number) {
@@ -717,7 +719,7 @@ function addBriefCopy(index:number) {
   if(!copy)return
   const long=copy.length>36
   const object:EditorObject={id:`copy-${selectedTask.id}-${Date.now()}`,type:'text',name:copy.slice(0,42),text:copy,x:48,y:180,width:long?440:310,height:long?64:40,rotation:0,fontSize:long?20:24,fontWeight:copy===projects[selectedTask.id].headline?850:650,fontFamily:'Manrope',color:selectedTask.id==='balance'?'#f4f0e9':'#222126',lineHeight:1.12,letterSpacing:0,textAlign:'left'}
-  objects.push(object);selectedId=object.id;saveHistory();render();notify('Строка из брифа добавлена')
+  objects.push(object);selectedId=object.id;mobileEditorView='canvas';saveHistory();render();notify('Строка из брифа добавлена')
 }
 
 function applyPaletteColor(color:string) {
@@ -780,6 +782,7 @@ function goHome() {
 
 function openTask(task: Task) {
   selectedTask = task
+  mobileEditorView = 'canvas'
   briefOpen = safeStorageGet(briefDismissedKey(task.id)) !== 'closed'
   screen = 'editor'
   posterBackground = TASK_BACKGROUNDS[task.id] ?? '#f2f0e9'
@@ -825,14 +828,14 @@ function render() {
 }
 
 function renderNav(active: Exclude<Screen, 'editor'>) {
-  const items: Array<[Exclude<Screen, 'editor'>, string, keyof typeof UI_ICON_SVGS]> = [
-    ['home', 'Главная', 'home'],
-    ['courses', 'Курсы', 'courses'],
-    ['tasks', 'Задания', 'tasks'],
-    ['assistant', 'ИИ-помощник', 'assistant'],
-    ['progress', 'Прогресс', 'progress'],
+  const items: Array<[Exclude<Screen, 'editor'>, string, string, keyof typeof UI_ICON_SVGS]> = [
+    ['home', 'Главная', 'Главная', 'home'],
+    ['courses', 'Курсы', 'Курсы', 'courses'],
+    ['tasks', 'Задания', 'Задания', 'tasks'],
+    ['assistant', 'ИИ-помощник', 'ИИ', 'assistant'],
+    ['progress', 'Прогресс', 'Прогресс', 'progress'],
   ]
-  return `<nav class="main-nav" aria-label="Основная навигация">${items.map(([id, label, icon]) => `<button class="nav-item ${active === id ? 'active' : ''}" data-screen="${id}" ${active === id ? 'aria-current="page"' : ''}><span aria-hidden="true">${uiIcon(icon)}</span>${label}</button>`).join('')}</nav>`
+  return `<nav class="main-nav" aria-label="Основная навигация">${items.map(([id, label, shortLabel, icon]) => `<button class="nav-item ${active === id ? 'active' : ''}" data-screen="${id}" aria-label="${label}" ${active === id ? 'aria-current="page"' : ''}><span class="nav-icon" aria-hidden="true">${uiIcon(icon)}</span><span class="nav-label">${label}</span><span class="nav-short" aria-hidden="true">${shortLabel}</span></button>`).join('')}<button class="nav-item nav-chat-trigger" type="button" data-open-ai-chat aria-label="Открыть чат с ИИ"><span class="nav-icon" aria-hidden="true">${uiIcon('sparkles')}</span><span class="nav-label">Чат с ИИ</span><span class="nav-short" aria-hidden="true">Чат</span></button></nav>`
 }
 
 function renderPageHeader(kicker: string, title: string, description: string, active: Exclude<Screen, 'editor'>) {
@@ -1064,7 +1067,7 @@ function renderEditor() {
   const project = projects[selectedTask.id]
   const selectedIndex = objects.findIndex(item => item.id === selectedId)
   return `
-    <main class="shell editor-shell">
+    <main class="shell editor-shell" data-mobile-view="${mobileEditorView}">
       <header class="editor-topbar">
         <div class="editor-brand">
           <img class="editor-wordmark" src="${LOGO_SIGN_SRC}" alt="Точка сборки">
@@ -1080,6 +1083,14 @@ function renderEditor() {
           <button class="primary-button" data-action="check">Проверить ${uiIcon('forward')}</button>
         </div>
       </header>
+
+      <nav class="mobile-editor-tabs" aria-label="Панели редактора" role="tablist">
+        <button type="button" role="tab" data-mobile-view="canvas" aria-selected="${mobileEditorView === 'canvas'}">Холст</button>
+        <button type="button" role="tab" data-mobile-view="add" aria-selected="${mobileEditorView === 'add'}">Добавить</button>
+        <button type="button" role="tab" data-mobile-view="properties" aria-selected="${mobileEditorView === 'properties'}">Свойства</button>
+        <button type="button" role="tab" data-mobile-view="layers" aria-selected="${mobileEditorView === 'layers'}">Слои <span>${objects.length}</span></button>
+        <button type="button" class="mobile-editor-chat" data-open-ai-chat aria-label="Открыть чат с ИИ">${uiIcon('sparkles')}<span>ИИ</span></button>
+      </nav>
 
       <div class="editor-layout">
         <aside class="left-panel panel">
@@ -1644,6 +1655,19 @@ window.addEventListener('blur', () => { spaceHeld = false; updateWorkspace() })
 
 function bindEvents() {
   if (screen === 'editor') bindWorkspace()
+  app.querySelectorAll<HTMLButtonElement>('.mobile-editor-tabs [data-mobile-view]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const view = button.dataset.mobileView as typeof mobileEditorView | undefined
+      if (!view) return
+      mobileEditorView = view
+      const editor = app.querySelector<HTMLElement>('.editor-shell')
+      if (editor) editor.dataset.mobileView = view
+      app.querySelectorAll<HTMLButtonElement>('.mobile-editor-tabs [data-mobile-view]').forEach((tab) => {
+        tab.setAttribute('aria-selected', String(tab === button))
+      })
+      if (view === 'canvas') requestAnimationFrame(() => fitWorkspace())
+    })
+  })
   app.querySelectorAll<HTMLElement>('[data-screen]').forEach((element) => {
     element.addEventListener('click', () => {
       const target = element.dataset.screen as Exclude<Screen, 'editor'> | undefined

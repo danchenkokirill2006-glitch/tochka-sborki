@@ -4063,3 +4063,368 @@ html[data-theme="light"] .editor-shell .right-panel .field > span { color: #5f63
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto!important; animation-duration: .01ms!important; animation-iteration-count: 1!important; transition-duration: .01ms!important; }
 }
+
+/* Phone layouts: navigation, learning screens and a canvas-first editor. */
+.mobile-editor-tabs { display: none; }
+@media (max-width: 760px) {
+  html, body { width: 100%; min-width: 0; overflow-x: clip; }
+  #app { width: 100%; min-width: 0; overflow-x: clip; }
+  .shell:not(.editor-shell) { width: 100%; min-width: 0; padding-bottom: calc(96px + env(safe-area-inset-bottom)); overflow: clip; }
+  .inner-shell { width: 100%; }
+
+  .topbar {
+    position: relative;
+    z-index: 20;
+    width: 100%;
+    height: 68px!important;
+    min-height: 68px!important;
+    padding: 8px 16px!important;
+    flex-wrap: nowrap!important;
+    gap: 10px!important;
+    backdrop-filter: none!important;
+    -webkit-backdrop-filter: none!important;
+  }
+  .topbar .brand { flex: 0 0 auto; min-width: 44px!important; }
+  .topbar .brand-wordmark { display: inline!important; font-size: 13px; white-space: nowrap; }
+  .topbar .brand-logo, .topbar .brand-logo img { width: 38px!important; height: 38px!important; }
+  .topbar-right { margin-left: auto!important; flex: 0 0 auto; gap: 7px!important; }
+  .topbar .subscription-button { display: none!important; }
+  .topbar .theme-toggle { width: 42px; min-width: 42px; min-height: 42px; padding: 0!important; display: grid; place-items: center; }
+  .topbar .theme-toggle .theme-label { display: none; }
+  .topbar .avatar-button { width: 42px; height: 42px; }
+  .topbar .main-nav {
+    position: fixed!important;
+    z-index: 1000;
+    left: 50%;
+    right: auto!important;
+    top: auto!important;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    width: min(430px, calc(100vw - 24px))!important;
+    height: 64px;
+    margin: 0!important;
+    padding: 5px!important;
+    display: flex!important;
+    flex-wrap: nowrap!important;
+    align-items: stretch;
+    justify-content: space-between!important;
+    gap: 3px!important;
+    overflow: visible!important;
+    transform: translateX(-50%);
+    border: 1px solid var(--ui-stroke)!important;
+    border-radius: 21px!important;
+    background: color-mix(in srgb, var(--ui-surface) 92%, transparent)!important;
+    box-shadow: 0 12px 38px rgba(0,0,0,.3), inset 0 1px rgba(255,255,255,.08);
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+  }
+  .topbar .main-nav .nav-item {
+    min-width: 0!important;
+    min-height: 52px!important;
+    flex: 1 1 20%!important;
+    display: flex!important;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 3px!important;
+    padding: 4px 2px!important;
+    border-radius: 15px!important;
+    font-size: 9px!important;
+    line-height: 1.1;
+    white-space: nowrap;
+    color: var(--ui-muted)!important;
+  }
+  .topbar .main-nav .nav-item .nav-icon { display: grid!important; place-items: center; height: 20px; }
+  .topbar .main-nav .nav-item .ui-icon { width: 18px!important; height: 18px!important; }
+  .topbar .main-nav .nav-item .nav-label { display: none!important; }
+  .topbar .main-nav .nav-item .nav-short { display: block!important; font-size: 9px; }
+  .topbar .main-nav .nav-item.active { color: var(--ui-ink)!important; }
+  .topbar .main-nav .nav-chat-trigger { color: #fff!important; background: linear-gradient(145deg,#916dff,#7152d9)!important; box-shadow: 0 5px 16px rgba(123,91,230,.28); }
+  .topbar .main-nav .nav-chat-trigger .nav-icon { color: #fff!important; }
+
+  .content-heading {
+    width: calc(100% - 36px)!important;
+    padding: 38px 0 22px!important;
+  }
+  .content-heading h1 { max-width: 100%; font-size: clamp(38px, 10.5vw, 58px)!important; line-height: 1.02!important; overflow-wrap: anywhere; }
+  .content-heading p { font-size: 14px!important; line-height: 1.55!important; }
+
+  .home-shell .hero {
+    width: calc(100% - 36px)!important;
+    min-height: 0!important;
+    grid-template-columns: minmax(0,1fr)!important;
+    gap: 0!important;
+    padding: 34px 0 8px!important;
+  }
+  .home-shell .hero h1 { margin: 17px 0!important; font-size: clamp(43px, 12vw, 68px)!important; line-height: 1.02!important; }
+  .home-shell .hero-copy > p { max-width: 40ch; font-size: 15px!important; line-height: 1.58!important; }
+  .home-shell .hero-actions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px!important; margin-top: 18px!important; }
+  .home-shell .hero-actions > button { width: 100%; min-width: 0; min-height: 46px!important; padding-inline: 7px!important; font-size: 9px!important; letter-spacing: 0!important; }
+  .home-shell .hero-topics { flex-wrap: wrap; gap: 6px!important; margin-top: 15px!important; }
+  .home-shell .hero-topics span { padding: 7px 9px!important; font-size: 8px!important; }
+  .home-shell .hero-visual {
+    width: 100%;
+    height: clamp(290px, 88vw, 410px)!important;
+    min-height: 0!important;
+    margin-top: 5px!important;
+    overflow: hidden!important;
+    touch-action: pan-y;
+  }
+  .home-shell .hero-sculpture { width: 100%!important; height: 100%!important; max-height: 390px; object-fit: contain; }
+  .home-shell .hero-scene-caption { right: 4%!important; bottom: 2%!important; font-size: 8px!important; }
+
+  .home-shell .progress-strip {
+    width: calc(100% - 36px)!important;
+    min-height: 0!important;
+    grid-template-columns: minmax(0,1fr) minmax(0,1fr)!important;
+    gap: 12px 14px!important;
+    padding: 14px 0!important;
+  }
+  .home-shell .progress-strip > div:not(.progress-line) {
+    min-width: 0;
+    display: grid!important;
+    gap: 5px!important;
+    align-content: start;
+  }
+  .home-shell .progress-strip .progress-line { grid-column: 1/-1!important; grid-row: 2!important; }
+  .home-shell .progress-strip > div:nth-child(3) { grid-column: 1!important; grid-row: 3!important; }
+  .home-shell .progress-strip > div:nth-child(4) { grid-column: 2!important; grid-row: 3!important; }
+  .home-shell .progress-strip .muted-label { font-size: 7px!important; line-height: 1.35; }
+  .home-shell .progress-strip strong { font-size: 14px!important; }
+  .home-shell .tasks-section { width: calc(100% - 36px)!important; padding: 50px 0 28px!important; }
+  .home-shell .section-heading { margin-bottom: 16px!important; }
+  .home-shell .section-heading h2 { font-size: clamp(30px, 8vw, 42px)!important; }
+  .home-shell .feature-grid { grid-template-columns: minmax(0,1fr)!important; gap: 10px!important; }
+  .home-shell .feature-card { border-radius: 18px!important; }
+  .home-shell .feature-card-link {
+    display: grid!important;
+    grid-template-columns: 96px minmax(0,1fr)!important;
+    align-items: stretch;
+    min-height: 120px!important;
+    height: auto!important;
+  }
+  .home-shell .feature-card .feature-card-visual {
+    grid-column: 1!important;
+    grid-row: 1!important;
+    width: 96px!important;
+    min-width: 96px!important;
+    height: 120px!important;
+    min-height: 120px!important;
+    flex: none!important;
+    margin: 0!important;
+    padding: 8px!important;
+    border-radius: 18px 0 0 18px!important;
+    overflow: hidden!important;
+  }
+  .home-shell .feature-card .feature-card-visual img { width: 100%!important; height: 100%!important; max-width: 100%!important; max-height: 100%!important; transform: none!important; }
+  .home-shell .feature-card-copy {
+    grid-column: 2!important;
+    grid-row: 1!important;
+    min-height: 120px!important;
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 14px 34px 14px 13px!important;
+  }
+  .home-shell .feature-card-copy h3 { margin-bottom: 5px!important; font-size: 16px!important; }
+  .home-shell .feature-card-copy p { font-size: 11px!important; line-height: 1.4!important; }
+  .home-shell .feature-arrow { right: 10px!important; bottom: 10px!important; width: 26px!important; height: 26px!important; }
+  .home-shell .home-footer { width: calc(100% - 36px); justify-content: space-between; font-size: 8px; }
+
+  .inner-shell > .course-intro,
+  .inner-shell > .assistant-layout,
+  .inner-shell > .assistant-bottom,
+  .inner-shell > .progress-dashboard,
+  .inner-shell > .skills-grid,
+  .inner-shell > .profile-hero-card,
+  .inner-shell > .profile-settings,
+  .inner-shell > .theory-grid,
+  .inner-shell > .content-grid,
+  .inner-shell > .task-list-page { width: calc(100% - 36px)!important; max-width: none!important; }
+  .inner-shell .course-intro { display: grid!important; gap: 8px!important; padding: 17px!important; border-radius: 18px!important; }
+  .inner-shell .course-intro h2 { font-size: 23px!important; }
+  .inner-shell .course-intro p { font-size: 13px!important; }
+  .inner-shell .theory-grid { grid-template-columns: minmax(0,1fr)!important; gap: 10px!important; margin-bottom: 36px!important; }
+  .inner-shell .theory-card { grid-template-columns: 64px minmax(0,1fr)!important; gap: 13px!important; min-height: 0!important; padding: 15px!important; border-radius: 17px!important; }
+  .inner-shell .theory-icon { width: 64px!important; height: 64px!important; border-radius: 15px!important; }
+  .inner-shell .theory-card h2 { margin: 6px 0!important; font-size: 20px!important; }
+  .inner-shell .theory-card p { font-size: 12px!important; line-height: 1.55!important; }
+  .inner-shell .theory-card .outline-button { grid-column: 1/-1; min-height: 44px; }
+
+  .inner-shell .task-list-page { margin-bottom: 24px!important; padding-bottom: 0!important; }
+  .inner-shell .task-filter-row { display: block!important; margin-bottom: 12px!important; }
+  .inner-shell .filter-pills { display: flex!important; flex-wrap: nowrap!important; gap: 7px!important; max-width: 100%; overflow-x: auto!important; padding: 2px 1px 8px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .inner-shell .filter-pills::-webkit-scrollbar { display: none; }
+  .inner-shell .filter-pills button { min-height: 44px!important; flex: 0 0 auto; padding-inline: 13px!important; white-space: nowrap; }
+  .inner-shell .list-counter { display: block; margin: 2px 0 12px; font-size: 9px!important; }
+  .inner-shell .curriculum-note { margin: 8px 0 14px!important; border-radius: 14px!important; }
+  .inner-shell .curriculum-note summary { min-height: 50px!important; padding: 10px 13px!important; font-size: 12px!important; }
+  .inner-shell .task-list { gap: 9px!important; }
+  .inner-shell .task-row-card {
+    display: grid!important;
+    grid-template-columns: 70px minmax(0,1fr)!important;
+    grid-template-areas: "preview main" "action action"!important;
+    align-items: center;
+    gap: 10px 12px!important;
+    min-height: 0!important;
+    padding: 10px!important;
+    border-radius: 16px!important;
+  }
+  .inner-shell .task-row-preview { grid-area: preview!important; width: 70px!important; height: 76px!important; border-radius: 10px!important; }
+  .inner-shell .task-row-main { grid-area: main!important; gap: 0!important; align-items: flex-start!important; }
+  .inner-shell .task-row-main h2 { margin: 0 0 4px!important; font-size: 15px!important; }
+  .inner-shell .task-row-main p { margin: 0 0 7px!important; font-size: 10px!important; line-height: 1.35!important; }
+  .inner-shell .task-row-main .task-meta { flex-wrap: wrap; gap: 5px!important; }
+  .inner-shell .task-row-main .task-meta span { padding: 4px 7px!important; font-size: 8px!important; }
+  .inner-shell .task-row-action { grid-area: action!important; width: 100%!important; min-height: 44px!important; height: 44px!important; border-radius: 12px!important; }
+  .inner-shell .task-result { display: none!important; }
+
+  .inner-shell .assistant-layout,
+  .inner-shell .progress-dashboard,
+  .inner-shell .skills-grid { grid-template-columns: minmax(0,1fr)!important; gap: 10px!important; margin-bottom: 24px!important; }
+  .inner-shell .assistant-main,
+  .inner-shell .assistant-side,
+  .inner-shell .progress-card,
+  .inner-shell .profile-hero-card,
+  .inner-shell .profile-settings { min-width: 0; padding: 20px!important; border-radius: 18px!important; }
+  .inner-shell .assistant-main { min-height: 0!important; }
+  .inner-shell .assistant-orb { margin-bottom: 28px!important; }
+  .inner-shell .assistant-main h2 { font-size: clamp(31px,8vw,42px)!important; line-height: 1.02!important; }
+  .inner-shell .assistant-main p { font-size: 13px!important; line-height: 1.6!important; }
+  .inner-shell .assistant-actions { display: grid; grid-template-columns: 1fr; gap: 8px; }
+  .inner-shell .assistant-actions button { min-height: 48px; }
+  .inner-shell .assistant-bottom { padding: 20px 0!important; }
+  .inner-shell .assistant-steps { grid-template-columns: repeat(2,minmax(0,1fr))!important; gap: 8px!important; }
+  .inner-shell .assistant-steps > div { min-width: 0; padding: 12px!important; }
+  .inner-shell .profile-hero-card { flex-direction: column!important; gap: 16px!important; }
+  .inner-shell .profile-settings { display: grid!important; grid-template-columns: minmax(0,1fr)!important; }
+  .inner-shell .profile-field input { min-height: 44px!important; font-size: 16px!important; }
+  .inner-shell .profile-upload span { min-height: 44px; display: grid; place-items: center; }
+  .inner-shell .profile-settings .theme-preview-button { min-height: 56px; }
+  .inner-shell .profile-settings .outline-button { min-height: 44px; }
+  .inner-shell .skill-card { min-width: 0; padding: 12px!important; }
+  .inner-shell .profile-progress { display: grid!important; grid-template-columns: 48px minmax(0,1fr)!important; gap: 10px 12px!important; align-items: center; }
+  .inner-shell .profile-progress .progress-avatar { grid-column: 1; grid-row: 1; width: 48px!important; height: 48px!important; border-radius: 15px!important; }
+  .inner-shell .profile-progress > div:nth-child(2) { grid-column: 2; min-width: 0; }
+  .inner-shell .profile-progress h2 { font-size: 18px!important; line-height: 1.15; overflow-wrap: anywhere; }
+  .inner-shell .profile-progress p { font-size: 10px!important; line-height: 1.4; }
+  .inner-shell .profile-progress .progress-big { grid-column: 2; justify-self: start; margin: 0!important; font-size: 32px!important; line-height: 1; }
+  .inner-shell .profile-progress .progress-big small { font-size: 13px!important; }
+  .inner-shell .progress-big { font-size: 38px!important; }
+  .ai-chat-launcher { display: none!important; }
+
+  .editor-shell { width: 100%; min-height: 100svh; padding-bottom: env(safe-area-inset-bottom); overflow: clip; }
+  .editor-shell .editor-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 80;
+    width: 100%;
+    min-height: 62px!important;
+    height: 62px!important;
+    flex-wrap: nowrap!important;
+    gap: 6px!important;
+    padding: 6px 10px!important;
+    background: color-mix(in srgb, var(--ui-surface) 94%, transparent)!important;
+    backdrop-filter: blur(18px);
+  }
+  .editor-shell .editor-brand { min-width: 0; gap: 6px!important; }
+  .editor-shell .editor-wordmark { display: none!important; }
+  .editor-shell .back-button { width: 44px!important; height: 44px!important; min-width: 44px; }
+  .editor-shell .editor-brand > div { min-width: 0; }
+  .editor-shell .editor-brand .brand-title { font-size: 9px!important; white-space: nowrap; }
+  .editor-shell .editor-breadcrumb { display: block; max-width: min(31vw,128px)!important; font-size: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .editor-shell .editor-top-actions { width: auto!important; margin-left: auto!important; flex: 0 0 auto; gap: 5px!important; }
+  .editor-shell .task-progress-mini { display: none!important; }
+  .editor-shell .editor-top-actions button { min-width: 42px; min-height: 44px!important; padding: 0 10px!important; font-size: 10px!important; letter-spacing: 0!important; border-radius: 12px!important; }
+  .editor-shell .editor-top-actions .primary-button { padding-inline: 12px!important; }
+  .editor-shell .mobile-editor-tabs {
+    position: sticky;
+    top: 62px;
+    z-index: 75;
+    display: grid!important;
+    grid-template-columns: repeat(5,minmax(0,1fr));
+    gap: 4px;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--ui-stroke);
+    background: var(--ui-surface);
+  }
+  .editor-shell .mobile-editor-tabs button {
+    min-width: 0;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 5px 3px;
+    border: 1px solid transparent;
+    border-radius: 11px;
+    background: transparent;
+    color: var(--ui-muted);
+    font-size: 10px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .editor-shell .mobile-editor-tabs button[aria-selected="true"] { color: var(--ui-ink); background: color-mix(in srgb,var(--ui-accent) 17%,var(--ui-surface)); border-color: color-mix(in srgb,var(--ui-accent) 35%,transparent); }
+  .editor-shell .mobile-editor-tabs button span { opacity: .7; font-size: 9px; }
+  .editor-shell .mobile-editor-tabs .mobile-editor-chat { color: var(--ui-accent); }
+  .editor-open .ai-chat-launcher { display: none!important; }
+  .editor-shell .editor-layout { display: grid!important; grid-template-columns: minmax(0,1fr)!important; gap: 0!important; height: auto!important; min-height: 0!important; }
+  .editor-shell .editor-layout > .left-panel,
+  .editor-shell .editor-layout > .right-panel { display: none!important; }
+  .editor-shell .editor-layout > .workspace { display: flex!important; order: 0!important; flex-direction: column; width: 100%; min-width: 0!important; height: auto!important; min-height: 0!important; overflow: visible!important; }
+  .editor-shell[data-mobile-view="add"] .editor-layout > .workspace,
+  .editor-shell[data-mobile-view="properties"] .editor-layout > .workspace,
+  .editor-shell[data-mobile-view="layers"] .editor-layout > .workspace { display: none!important; }
+  .editor-shell[data-mobile-view="add"] .editor-layout > .left-panel { display: block!important; order: 0!important; width: 100%; max-height: none!important; overflow: visible!important; padding: 16px!important; }
+  .editor-shell[data-mobile-view="properties"] .editor-layout > .right-panel,
+  .editor-shell[data-mobile-view="layers"] .editor-layout > .right-panel { display: block!important; order: 0!important; width: 100%; height: auto!important; min-height: 0!important; max-height: none!important; padding: 0!important; overflow: visible!important; grid-template-columns: minmax(0,1fr)!important; grid-template-rows: auto!important; }
+  .editor-shell[data-mobile-view="properties"] .editor-layout > .right-panel .layers-dock { display: none!important; }
+  .editor-shell[data-mobile-view="layers"] .editor-layout > .right-panel .inspector-dock { display: none!important; }
+  .editor-shell .right-panel .inspector-dock,
+  .editor-shell .right-panel .layers-dock { width: 100%; max-height: none!important; min-height: 0!important; padding: 16px!important; overflow: visible!important; border-bottom: 0!important; }
+  .editor-shell .right-panel .layers { max-height: none!important; overflow: visible!important; }
+  .editor-shell .right-panel .field input,
+  .editor-shell .right-panel .field select { min-height: 44px!important; height: 44px!important; font-size: 16px!important; }
+  .editor-shell .right-panel .field textarea { min-height: 90px!important; font-size: 16px!important; }
+  .editor-shell .right-panel .layer-row { min-height: 54px!important; grid-template-columns: 26px 38px minmax(0,1fr) auto!important; gap: 9px!important; padding: 7px 9px!important; }
+  .editor-shell .right-panel .layer-type { display: block!important; }
+  .editor-shell .element-buttons { grid-template-columns: repeat(2,minmax(0,1fr))!important; }
+  .editor-shell .element-buttons button { min-height: 58px!important; }
+  .editor-shell .workspace-toolbar {
+    display: grid!important;
+    grid-template-columns: minmax(0,1fr) auto;
+    align-items: center;
+    gap: 8px!important;
+    min-height: 0!important;
+    padding: 9px 10px!important;
+  }
+  .editor-shell .workspace-heading { grid-column: 1/-1; display: flex!important; align-items: center; justify-content: space-between; gap: 8px; }
+  .editor-shell .workspace-heading > div:first-child { display: block!important; }
+  .editor-shell .workspace-title { font-size: 10px!important; }
+  .editor-shell .workspace-subtitle { margin-left: 7px; font-size: 8px!important; }
+  .editor-shell .brief-toggle { min-height: 38px!important; padding: 0 10px!important; font-size: 10px!important; }
+  .editor-shell .poster-background-control { grid-column: 1; min-height: 38px; font-size: 8px!important; }
+  .editor-shell .viewport-tools { grid-column: 2; gap: 3px!important; }
+  .editor-shell .viewport-tools button { min-width: 42px!important; min-height: 44px!important; padding: 0 6px!important; }
+  .editor-shell .viewport-tools output { min-width: 34px!important; font-size: 9px; }
+  .editor-shell .viewport-tools [data-action="fit"] { font-size: 9px!important; }
+  .editor-shell .task-brief { position: fixed!important; z-index: 120; top: 118px!important; left: 10px!important; right: 10px!important; width: auto!important; max-width: none!important; max-height: calc(100svh - 140px)!important; overflow-y: auto!important; overscroll-behavior: contain; }
+  .editor-shell .canvas-stage { flex: 0 0 clamp(350px,55svh,540px)!important; width: 100%; height: clamp(350px,55svh,540px)!important; min-height: 350px!important; max-height: 540px; padding: 10px!important; overflow: hidden!important; touch-action: none; }
+  .editor-shell .workspace-bottom { min-height: 34px; padding: 5px 10px!important; font-size: 9px!important; }
+  .editor-shell[data-mobile-view="add"] .editor-layout > .left-panel,
+  .editor-shell[data-mobile-view="properties"] .editor-layout > .right-panel,
+  .editor-shell[data-mobile-view="layers"] .editor-layout > .right-panel { min-height: calc(100svh - 118px); }
+  .editor-shell .ai-chat-launcher { right: 12px!important; bottom: calc(12px + env(safe-area-inset-bottom))!important; z-index: 70; width: 46px!important; height: 46px!important; }
+}
+
+@media (max-width: 380px) {
+  .topbar .brand-wordmark { font-size: 12px; }
+  .topbar .main-nav .nav-item { font-size: 8px!important; }
+  .topbar .main-nav .nav-item .nav-short { font-size: 8px; }
+  .home-shell .hero h1 { font-size: 42px!important; }
+  .editor-shell .editor-breadcrumb { max-width: 25vw!important; }
+  .editor-shell .editor-top-actions button { padding-inline: 7px!important; font-size: 9px!important; }
+  .editor-shell .workspace-toolbar { grid-template-columns: minmax(0,1fr); }
+  .editor-shell .poster-background-control,
+  .editor-shell .viewport-tools { grid-column: 1; justify-content: space-between; }
+}
