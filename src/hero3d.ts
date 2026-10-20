@@ -56,14 +56,19 @@ export function mountHeroScene(host: HTMLElement): () => void {
     ribbonShape.moveTo(-.42,-.055); ribbonShape.lineTo(.42,-.055)
     ribbonShape.quadraticCurveTo(.46,0,.42,.055); ribbonShape.lineTo(-.42,.055)
     ribbonShape.quadraticCurveTo(-.46,0,-.42,-.055)
-    // Closed Catmull-Rom curves wrap their control points automatically. Do not
-    // repeat the first point at the end: that creates a zero-length segment and
-    // an extrusion-frame discontinuity that shows up as a diagonal seam.
+    // Closed Catmull-Rom curves wrap their control points automatically; do not
+    // repeat the first point at the end, which would create a zero-length segment.
     const points=Array.from({length:96},(_,i)=>{
       const t=i/96*Math.PI*2
       return new THREE.Vector3(1.4*Math.cos(t),1.75*Math.sin(t),-.12+.35*Math.sin(2*t))
     })
-    const path=new THREE.CatmullRomCurve3(points,true,'centripetal')
+    const path=new class extends THREE.CatmullRomCurve3 {
+      override getTangent(t:number,target=new THREE.Vector3()) {
+        // Finite differences can make the closed curve's tangent at u=1 differ
+        // slightly from u=0. Reuse the exact starting tangent to close the frame.
+        return super.getTangent(t>=1?0:t,target)
+      }
+    }(points,true,'centripetal')
     const rawRibbon=new THREE.ExtrudeGeometry(ribbonShape,{steps:240,extrudePath:path,bevelEnabled:false})
     rawRibbon.deleteAttribute('normal'); rawRibbon.deleteAttribute('uv')
     const smoothRibbon=mergeVertices(rawRibbon); smoothRibbon.computeVertexNormals(); rawRibbon.dispose()
