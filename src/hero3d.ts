@@ -74,17 +74,19 @@ export function mountHeroScene(host: HTMLElement): () => void {
     const smoothRibbon=mergeVertices(rawRibbon); smoothRibbon.computeVertexNormals(); rawRibbon.dispose()
     const ribbon=mesh(smoothRibbon,blue,-.15,.12,0)
     ribbon.rotation.z=.32
+    ribbon.scale.setScalar(.9)
+    ribbon.position.set(-.08,.02,0)
     // Nest the smaller volumes inside the ribbon, sharing its centre of mass.
-    // Keep depth shallow so side views remain a sculpture rather than an exploded diagram.
-    // Separate the nested rings along depth so their silhouettes remain distinct.
-    const ring=mesh(new THREE.TorusGeometry(.64,.14,32,128),glass,-.12,-.22,.68)
+    // Balance the four accents around a centered glass ring instead of stacking
+    // every small form on the right side of the hero.
+    const ring=mesh(new THREE.TorusGeometry(.64,.14,32,128),glass,0,0,.68)
     ring.rotation.set(.25,.35,-.32)
-    const satellite=mesh(new THREE.TorusGeometry(.29,.06,24,96),chrome,-.34,-.42,1.08)
+    const satellite=mesh(new THREE.TorusGeometry(.29,.06,24,96),chrome,.46,-.48,1.02)
     satellite.rotation.set(.7,-.45,.16)
-    mesh(new THREE.SphereGeometry(.39,48,32),cream,.24,.92,1.12)
-    const block=mesh(new RoundedBoxGeometry(.5,.5,.5,5,.09),orange,.48,-1.04,1.12)
+    mesh(new THREE.SphereGeometry(.39,48,32),cream,-.48,.54,1.02)
+    const block=mesh(new RoundedBoxGeometry(.5,.5,.5,5,.09),orange,-.48,-.54,1.02)
     block.rotation.set(.2,.36,.24)
-    const bead=mesh(new THREE.SphereGeometry(.14,24,16),chrome,-.5,.64,.72)
+    const bead=mesh(new THREE.SphereGeometry(.14,24,16),chrome,.48,.54,.82)
     bead.name='counterweight'
     let dragging=false, pointer=-1, x=0,y=0, velocity=0,lastMove=0, visible=true
     const activePointers=new Map<number,{x:number;y:number}>()
